@@ -5,8 +5,8 @@ const canvas=document.querySelector<HTMLCanvasElement>("#game")!,ctx=canvas.getC
 const mapCanvas=document.querySelector<HTMLCanvasElement>("#map")!,mapCtx=mapCanvas.getContext("2d")!;
 const encounter=document.querySelector<HTMLElement>("#encounter")!,roll=document.querySelector<HTMLElement>("#roll")!,wardenHp=document.querySelector<HTMLElement>("#warden-hp")!,message=document.querySelector<HTMLElement>("#message")!,interact=document.querySelector<HTMLButtonElement>("#interact")!,keyStatus=document.querySelector<HTMLElement>("#key-status")!,hpStatus=document.querySelector<HTMLElement>("#hp-status")!;
 ctx.imageSmoothingEnabled=false;mapCtx.imageSmoothingEnabled=false;
-const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Image(),ceiling:new Image(),chest:new Image(),pillar:new Image(),skulls:new Image(),speaker:new Image()};
-for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wall.png",door:"dungeon_door.png",locked:"locked_door.png",ceiling:"dungeon_ceiling.png",chest:"chest_exterior.png",pillar:"pillar_interior.png",skulls:"skull_pile.png",speaker:"death_speaker.png"})) atlas[k as keyof typeof atlas].src=new URL(`../assets/${file}`,import.meta.url).href;
+const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Image(),ceiling:new Image(),chest:new Image(),pillar:new Image(),skulls:new Image(),speaker:new Image(),skeleton:new Image()};
+for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wall.png",door:"dungeon_door.png",locked:"locked_door.png",ceiling:"dungeon_ceiling.png",chest:"chest_exterior.png",pillar:"pillar_interior.png",skulls:"skull_pile.png",speaker:"death_speaker.png",skeleton:"skeleton.png"})) atlas[k as keyof typeof atlas].src=new URL(`../assets/${file}`,import.meta.url).href;
 
 // 0 floor, 1 wall, 2 door, 3 locked door. A deliberately authored place, not a generated maze.
 const MAP:Tile[][]=[
@@ -22,7 +22,7 @@ const MAP:Tile[][]=[
  [1,0,0,0,0,0,0,3,0,0,0,1],
  [1,1,1,1,1,1,1,1,1,1,1,1],
 ];
-const player={x:1,y:9,facing:0 as Facing,hp:6},visited=new Set<string>(),used=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,guarded=false,opening=false;const warden={x:5,y:9,hp:4,awake:false,dead:false};
+const player={x:1,y:9,facing:0 as Facing,hp:6},visited=new Set<string>(),used=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,guarded=false,opening=false;const warden={x:5,y:9,hp:3,awake:false,dead:false};
 const features=new Map<string,Feature>([["2,2","pillar"],["3,6","skulls"],["7,3","speaker"],["10,7","chest"]]);
 const secret={x:7,y:9,revealed:false};
 const DRAW=[{sx:0,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:240,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:320,sy:0,sw:160,sh:120,dx:0,dy:0},{sx:480,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:560,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:0,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:120,sw:160,sh:120,dx:0,dy:0},{sx:320,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:400,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:480,sy:120,sw:160,sh:120,dx:0,dy:0}];
@@ -37,21 +37,23 @@ function featureAt(x:number,y:number){return features.get(key(x,y))}
 function targetFeature(){const[x,y]=worldOffset(1,0);return {x,y,feature:featureAt(x,y)}}
 function monsterAt(x:number,y:number){return warden.awake&&!warden.dead&&warden.x===x&&warden.y===y}
 function targetMonster(){const[x,y]=worldOffset(1,0);return monsterAt(x,y)}
+function drawMonster(){if(!warden.awake||warden.dead)return;const d=dirs[player.facing],dx=warden.x-player.x,dy=warden.y-player.y,f=dx*d.fx+dy*d.fy,r=dx*d.rx+dy*d.ry;if(f<1||f>2||Math.abs(r)>1)return;const blocked=f===2&&tileAt(...worldOffset(1,r))!==0;if(blocked)return;const scale=f===1?.055:.032,w=atlas.skeleton.naturalWidth*scale,h=atlas.skeleton.naturalHeight*scale,x=80+r*(f===1?48:28)-w/2,y=106-h;ctx.drawImage(atlas.skeleton,Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
 function updateInteract(){const target=targetFeature(),[tx,ty]=worldOffset(1,0),atMonster=targetMonster(),atLocked=tileAt(tx,ty)===3,atSecret=player.x===8&&player.y===9&&!secret.revealed&&player.facing===3,available=!!target.feature||atSecret||atLocked||atMonster;interact.hidden=false;interact.style.visibility=available?"visible":"hidden";interact.style.pointerEvents=available?"auto":"none";interact.textContent=atMonster?"ATTACK":target.feature==="chest"?"OPEN":target.feature?"EXAMINE":atLocked?(hasSilverKey?"UNLOCK":"EXAMINE"):atSecret?"EXAMINE":""}
-function render(){reveal();keyStatus.hidden=!hasSilverKey;hpStatus.textContent=`HP ${player.hp}`;ctx.fillStyle=hitFlash?"#f6d6a8":"#000";ctx.fillRect(0,0,160,120);for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r);if(tileAt(x,y)!==1){drawSheet(atlas.ceiling,p);drawSheet(atlas.floor,p)}}for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r),t=tileAt(x,y);if(t===1)drawSheet(atlas.wall,p);else if(t===2)drawSheet(atlas.door,p);else if(t===3)drawSheet(atlas.locked,p);else{const ft=features.get(key(x,y));if(ft&&!used.has(key(x,y)))drawSheet(atlas[ft],p);if(monsterAt(x,y))drawSheet(atlas.speaker,p)}}renderMap();updateInteract()}
+function render(){reveal();keyStatus.hidden=!hasSilverKey;hpStatus.textContent=`HP ${player.hp}`;ctx.fillStyle=hitFlash?"#f6d6a8":"#000";ctx.fillRect(0,0,160,120);for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r);if(tileAt(x,y)!==1){drawSheet(atlas.ceiling,p);drawSheet(atlas.floor,p)}}for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r),t=tileAt(x,y);if(t===1)drawSheet(atlas.wall,p);else if(t===2)drawSheet(atlas.door,p);else if(t===3)drawSheet(atlas.locked,p);else{const ft=features.get(key(x,y));if(ft&&!used.has(key(x,y)))drawSheet(atlas[ft],p);}}drawMonster();renderMap();updateInteract()}
 function say(t:string){message.textContent=t}
 function wait(ms:number){return new Promise<void>(r=>setTimeout(r,ms))}
 function showEncounter(){
- inEncounter=true;document.body.classList.add("in-encounter");encounter.hidden=false;wardenHp.textContent="◆ ".repeat(warden.hp).trim();roll.textContent="HEAVY · after it attacks, your next strike gets +1";say("The stone warden turns toward you.")
+ inEncounter=true;document.body.classList.add("in-encounter");encounter.hidden=false;wardenHp.textContent="◆ ".repeat(warden.hp).trim();roll.textContent="REACH · its first attack comes before yours";say("The skeleton lowers its long blade.");void openingAttack()
 }
 function hideEncounter(){inEncounter=false;document.body.classList.remove("in-encounter");encounter.hidden=true}
+async function openingAttack(){busy=true;await wait(180);roll.textContent="The skeleton lunges first.";await enemyReply();opening=false}
 async function enemyReply(){
  busy=true;await wait(220);
  const die=1+Math.floor(Math.random()*6),hit=die>=4;
- if(hit){const damage=guarded?0:1;if(damage)player.hp--;roll.textContent=guarded?`WARDEN ⚄ ${die} — your guard turns the blow`:`WARDEN ⚄ ${die} — HIT`;hitFlash=damage;render();await wait(90);hitFlash=0}
- else{roll.textContent=`WARDEN ⚄ ${die} — MISS`}
+ if(hit){const damage=guarded?0:1;if(damage)player.hp--;roll.textContent=guarded?`SKELETON ⚄ ${die} — your guard turns the blow`:`SKELETON ⚄ ${die} — HIT`;hitFlash=damage;render();await wait(90);hitFlash=0}
+ else{roll.textContent=`SKELETON ⚄ ${die} — MISS`}
  guarded=false;opening=true;
- if(player.hp<=0){player.hp=6;player.x=1;player.y=9;player.facing=0;warden.hp=4;hideEncounter();say("Darkness. You wake beside the sealed stair.")}
+ if(player.hp<=0){player.hp=6;player.x=1;player.y=9;player.facing=0;warden.hp=3;hideEncounter();say("Darkness. You wake beside the sealed stair.")}
  render();busy=false
 }
 async function combat(a:string){
@@ -60,13 +62,13 @@ async function combat(a:string){
   const die=1+Math.floor(Math.random()*6),total=die+(opening?1:0);opening=false;
   if(total>=4){warden.hp--;roll.textContent=`YOU ⚄ ${die}${total!==die?" +1":""} — HIT`}else roll.textContent=`YOU ⚄ ${die} — MISS`;
   wardenHp.textContent="◆ ".repeat(Math.max(0,warden.hp)).trim();
-  if(warden.hp<=0){warden.dead=true;hideEncounter();say("The warden splits at the waist and collapses into lifeless stone.");render();return}
+  if(warden.hp<=0){warden.dead=true;hideEncounter();say("The skeleton comes apart in a clatter of bone and rusted steel.");render();return}
   await enemyReply();return
  }
  if(a==="guard"){guarded=true;roll.textContent="You brace for the warden's blow.";await enemyReply();return}
  if(a==="flee"){
   const die=1+Math.floor(Math.random()*6);roll.textContent=`FLEE ⚄ ${die}`;
-  if(die>=4){hideEncounter();warden.awake=false;say("You break away. The warden does not follow beyond the chamber.");render();return}
+  if(die>=4){hideEncounter();warden.awake=false;say("You break away. The skeleton remains beyond the sealed door.");render();return}
   await enemyReply()
  }
 }
@@ -78,7 +80,7 @@ function use(){const[tx,ty]=worldOffset(1,0);
   const damage=1+Math.floor(Math.random()*3);warden.hp-=damage;
   if(warden.hp<=0){warden.dead=true;say("Your blow cracks the warden apart. Stone fragments settle across the floor.");render();return}
   say(damage===3?"CRACK! Your blow splits the stone shell.":"CLANG! Your weapon bites into stone.");render();return
- }if(tileAt(tx,ty)===3){if(!hasSilverKey){say("A narrow silver keyhole hides beneath the grime.");render();return}MAP[ty][tx]=0;hasSilverKey=false;warden.awake=true;warden.x=5;warden.y=9;say("The tarnished key turns once, then snaps in the lock. Beyond the opening, stone grinds against stone. Something is moving.");render();return}if(player.x===8&&player.y===9&&!secret.revealed&&player.facing===3){secret.revealed=true;MAP[9][7]=0;say("One stone is warmer than the others. It sinks beneath your palm. Somewhere inside the wall: click.");render();return}const target=targetFeature(),f=target.feature;if(!f)return;const k=key(target.x,target.y);if(f==="pillar")say("Names have been cut into the pillar. Every one has been scratched out.");if(f==="skulls")say("Six skulls. Five face the corridor. One faces the wall.");if(f==="speaker")say("The stone mouth whispers: “The dead remember the way that stone forgets.”");if(f==="chest"){used.add(k);features.delete(k);hasSilverKey=true;say("Inside: a tarnished silver key and three old coins. You take them.");}render()}
+ }if(tileAt(tx,ty)===3){if(!hasSilverKey){say("A narrow silver keyhole hides beneath the grime.");render();return}MAP[ty][tx]=0;hasSilverKey=false;warden.awake=true;warden.x=5;warden.y=9;warden.hp=3;say("The tarnished key turns once, then snaps in the lock. Beyond the opening, bone scrapes against stone.");render();return}if(player.x===8&&player.y===9&&!secret.revealed&&player.facing===3){secret.revealed=true;MAP[9][7]=0;say("One stone is warmer than the others. It sinks beneath your palm. Somewhere inside the wall: click.");render();return}const target=targetFeature(),f=target.feature;if(!f)return;const k=key(target.x,target.y);if(f==="pillar")say("Names have been cut into the pillar. Every one has been scratched out.");if(f==="skulls")say("Six skulls. Five face the corridor. One faces the wall.");if(f==="speaker")say("The stone mouth whispers: “The dead remember the way that stone forgets.”");if(f==="chest"){used.add(k);features.delete(k);hasSilverKey=true;say("Inside: a tarnished silver key and three old coins. You take them.");}render()}
 function act(a:string){if(busy||inEncounter)return;if(a==="forward")step(1);if(a==="back")step(-1);if(a==="left")turn(-1);if(a==="right")turn(1);if(a==="interact")use()}
 window.addEventListener("keydown",e=>{const actions:Record<string,string>={arrowup:"forward",w:"forward",arrowdown:"back",s:"back",arrowleft:"left",a:"left",arrowright:"right",d:"right",e:"interact"," ":"interact"};const action=actions[e.key.toLowerCase()];if(action){e.preventDefault();act(action)}});
 document.querySelectorAll<HTMLButtonElement>("[data-combat]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();void combat(b.dataset.combat!)}));
