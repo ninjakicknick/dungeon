@@ -5,8 +5,8 @@ const canvas=document.querySelector<HTMLCanvasElement>("#game")!,ctx=canvas.getC
 const mapCanvas=document.querySelector<HTMLCanvasElement>("#map")!,mapCtx=mapCanvas.getContext("2d")!;
 const encounter=document.querySelector<HTMLElement>("#encounter")!,roll=document.querySelector<HTMLElement>("#roll")!,wardenHp=document.querySelector<HTMLElement>("#warden-hp")!,message=document.querySelector<HTMLElement>("#message")!,interact=document.querySelector<HTMLButtonElement>("#interact")!,keyStatus=document.querySelector<HTMLElement>("#key-status")!,hpStatus=document.querySelector<HTMLElement>("#hp-status")!;
 ctx.imageSmoothingEnabled=false;mapCtx.imageSmoothingEnabled=false;
-const BOXY_FIRST=32,BOXY_COUNT=96;
-function boxy(el:HTMLElement,text:string){el.setAttribute("aria-label",text);el.textContent="";for(const ch of text.toUpperCase()){const span=document.createElement("i");span.className="boxy-glyph";const code=ch.charCodeAt(0);if(code>=BOXY_FIRST&&code<BOXY_FIRST+BOXY_COUNT)span.style.backgroundPosition=`${((code-BOXY_FIRST)/(BOXY_COUNT-1))*100}% 0`;else span.classList.add("boxy-space");el.append(span)}}
+const BOXY_CHARS="!\\\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_\`{|}~";
+function boxy(el:HTMLElement,text:string){el.setAttribute("aria-label",text);el.textContent="";for(const ch of text.toUpperCase()){const span=document.createElement("i");span.className="boxy-glyph";const i=BOXY_CHARS.indexOf(ch);if(i>=0)span.style.backgroundPosition=`-${i*6}px 0`;else span.classList.add("boxy-space");el.append(span)}}
 function skinLabels(){document.querySelectorAll<HTMLElement>("[data-boxy]").forEach(el=>boxy(el,el.dataset.boxy||el.textContent||""))}
 
 const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Image(),ceiling:new Image(),chest:new Image(),pillar:new Image(),skulls:new Image(),speaker:new Image(),skeleton:new Image(),minimap:new Image(),cursor:new Image(),font:new Image()};
