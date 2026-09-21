@@ -8,10 +8,10 @@ const ctx = canvas.getContext("2d")!;
 ctx.imageSmoothingEnabled = false;
 
 const atlas = { floor:new Image(), wall:new Image(), door:new Image(), ceiling:new Image() };
-atlas.floor.src="./assets/dungeon_floor.png";
-atlas.wall.src="./assets/dungeon_wall.png";
-atlas.door.src="./assets/dungeon_door.png";
-atlas.ceiling.src="./assets/dungeon_ceiling.png";
+atlas.floor.src=new URL("../assets/dungeon_floor.png",import.meta.url).href;
+atlas.wall.src=new URL("../assets/dungeon_wall.png",import.meta.url).href;
+atlas.door.src=new URL("../assets/dungeon_door.png",import.meta.url).href;
+atlas.ceiling.src=new URL("../assets/dungeon_ceiling.png",import.meta.url).href;
 
 const MAP: Tile[][] = [
  [1,1,1,1,1,1,1],
