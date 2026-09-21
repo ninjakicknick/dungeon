@@ -5,8 +5,8 @@ const canvas=document.querySelector<HTMLCanvasElement>("#game")!,ctx=canvas.getC
 const mapCanvas=document.querySelector<HTMLCanvasElement>("#map")!,mapCtx=mapCanvas.getContext("2d")!;
 const encounter=document.querySelector<HTMLElement>("#encounter")!,roll=document.querySelector<HTMLElement>("#roll")!,wardenHp=document.querySelector<HTMLElement>("#warden-hp")!,message=document.querySelector<HTMLElement>("#message")!,interact=document.querySelector<HTMLButtonElement>("#interact")!,keyStatus=document.querySelector<HTMLElement>("#key-status")!,hpStatus=document.querySelector<HTMLElement>("#hp-status")!;
 ctx.imageSmoothingEnabled=false;mapCtx.imageSmoothingEnabled=false;
-const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Image(),ceiling:new Image(),chest:new Image(),pillar:new Image(),skulls:new Image(),speaker:new Image(),skeleton:new Image()};
-for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wall.png",door:"dungeon_door.png",locked:"locked_door.png",ceiling:"dungeon_ceiling.png",chest:"chest_exterior.png",pillar:"pillar_interior.png",skulls:"skull_pile.png",speaker:"death_speaker.png",skeleton:"skeleton.png"})) atlas[k as keyof typeof atlas].src=new URL(`../assets/${file}`,import.meta.url).href;
+const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Image(),ceiling:new Image(),chest:new Image(),pillar:new Image(),skulls:new Image(),speaker:new Image(),skeleton:new Image(),minimap:new Image(),cursor:new Image(),font:new Image()};
+for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wall.png",door:"dungeon_door.png",locked:"locked_door.png",ceiling:"dungeon_ceiling.png",chest:"chest_exterior.png",pillar:"pillar_interior.png",skulls:"skull_pile.png",speaker:"death_speaker.png",skeleton:"skeleton.png",minimap:"minimap.png",cursor:"minimap_cursor.png",font:"boxy_bold.png"})) atlas[k as keyof typeof atlas].src=new URL(`../assets/${file}`,import.meta.url).href;
 
 // 0 floor, 1 wall, 2 door, 3 locked door. A deliberately authored place, not a generated maze.
 const MAP:Tile[][]=[
@@ -33,7 +33,7 @@ function worldOffset(f:number,r:number):[number,number]{const d=dirs[player.faci
 function drawSheet(img:HTMLImageElement,p:number){const a=DRAW[p];ctx.drawImage(img,a.sx,a.sy,a.sw,a.sh,a.dx,a.dy,a.sw,a.sh)}
 function drawBillboard(img:HTMLImageElement,f:number,r:number,src?:{x:number,y:number,w:number,h:number}){if(f<1||f>2||Math.abs(r)>1)return;const w=f===1?90:42,h=f===1?88:41,x=80+r*(f===1?42:25)-w/2,floorY=f===1?112:88,y=floorY-h;if(src)ctx.drawImage(img,src.x,src.y,src.w,src.h,Math.round(x),Math.round(y),w,h);else ctx.drawImage(img,Math.round(x),Math.round(y),w,h)}
 function reveal(){visited.add(key(player.x,player.y));for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]])visited.add(key(player.x+dx,player.y+dy))}
-function renderMap(){const s=5;mapCtx.clearRect(0,0,60,55);for(let y=0;y<11;y++)for(let x=0;x<12;x++){if(!visited.has(key(x,y)))continue;const t=tileAt(x,y);mapCtx.fillStyle=t===1?"#251b17":t===2?"#8f563b":t===3?"#5e342c":"#b86f43";mapCtx.fillRect(x*s,y*s,s-1,s-1)}mapCtx.fillStyle="#f6d6a8";mapCtx.fillRect(player.x*s+1,player.y*s+1,3,3)}
+function renderMap(){const s=5;mapCtx.fillStyle="#08060a";mapCtx.fillRect(0,0,60,55);for(let y=0;y<11;y++)for(let x=0;x<12;x++){if(!visited.has(key(x,y)))continue;const t=tileAt(x,y),sx=t===1?0:t===2||t===3?2:1;mapCtx.drawImage(atlas.minimap,sx,0,1,1,x*s,y*s,s-1,s-1)}mapCtx.drawImage(atlas.cursor,player.x*s,player.y*s,s,s)}
 function featureAt(x:number,y:number){return features.get(key(x,y))}
 function targetFeature(){const[x,y]=worldOffset(1,0);return {x,y,feature:featureAt(x,y)}}
 function monsterAt(x:number,y:number){return warden.awake&&!warden.dead&&warden.x===x&&warden.y===y}
