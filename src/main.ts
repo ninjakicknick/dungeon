@@ -29,7 +29,7 @@ const MAP: Tile[][] = [
  [1,1,1,1,0,0,0,1],
  [1,1,1,1,1,1,1,1],
 ];
-const player={x:1,y:6,facing:0 as Facing};
+const player={x:4,y:6,facing:0 as Facing};
 const visited=new Set<string>();
 const chest={x:6,y:1,found:false};
 
