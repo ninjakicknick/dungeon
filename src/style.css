@@ -7,9 +7,9 @@
 .encounter-actions{gap:.5rem}.encounter-actions .combat-icon{position:relative;height:4.4rem;min-height:4.4rem;padding:0;background-color:#0d0910;background-image:none;border:0;box-shadow:none;color:#d7e7cf}.combat-icon::before{content:"";position:absolute;width:3.65rem;height:3.65rem;left:50%;top:50%;transform:translate(-50%,-54%);background-image:url("../assets/action_buttons.png");background-repeat:no-repeat;background-size:800% 100%;image-rendering:pixelated}.combat-icon.strike::before{background-position:0 0}.combat-icon.flee::before{background-position:14.2857% 0}.combat-icon.guard::before{background-image:none;background:#130d17;border:3px solid #d7e7cf;box-shadow:2px 2px 0 #28172d}.combat-icon span{position:absolute;left:0;right:0;bottom:-1.15rem;font-size:.55rem;font-weight:900;letter-spacing:.08em;text-shadow:1px 1px #000}.encounter-actions{padding-bottom:1.1rem}
 
 [data-boxy]{display:inline-flex;align-items:center;gap:1px;font-size:0;line-height:1}
-.boxy-glyph{display:inline-block;width:6px;height:8px;background-image:url("../assets/boxy_bold.png");background-repeat:no-repeat;background-size:516px 8px;image-rendering:pixelated;flex:0 0 auto}
+.boxy-glyph{display:inline-block;height:8px;background-image:url("../assets/boxy_bold.png");background-repeat:no-repeat;background-size:516px 8px;image-rendering:pixelated;flex:0 0 auto}
 .boxy-space{background-image:none;width:4px}
 .map-head [data-boxy]{transform:scale(1.15);transform-origin:center}
 .encounter-head [data-boxy]{transform:scale(1.5);transform-origin:left center;margin-right:1rem}
 .combat-icon [data-boxy]{display:flex;justify-content:center;bottom:-1rem}
-.combat-icon [data-boxy] .boxy-glyph{width:7px;height:7px}
+.combat-icon [data-boxy] .boxy-glyph{height:8px}
