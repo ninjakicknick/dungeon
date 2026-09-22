@@ -9,7 +9,7 @@ const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Imag
 for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wall.png",door:"dungeon_door.png",locked:"locked_door.png",ceiling:"dungeon_ceiling.png",chest:"chest_exterior.png",pillar:"pillar_interior.png",skulls:"skull_pile.png",speaker:"death_speaker.png",skeleton:"skeleton.png",minimap:"minimap.png",cursor:"minimap_cursor.png"})) atlas[k as keyof typeof atlas].src=new URL(`../assets/${file}`,import.meta.url).href;
 
 // 0 floor, 1 wall, 2 door, 3 locked door. The floor is rolled fresh each expedition.
-const W=12,H=11,MAP:Tile[][]=Array.from({length:H},()=>Array<Tile>(W).fill(1));
+const W=18,H=16,MAP:Tile[][]=Array.from({length:H},()=>Array<Tile>(W).fill(1));
 type Region={id:number,kind:"room"|"corridor",roll:number,cells:Array<[number,number]>,content?:string};
 const regions:Region[]=[],regionAt=new Map<string,number>(),resolvedRegions=new Set<number>(),sectionDoors=new Set<string>();
 const corridorRolls=new Set([11,12,13,14,26,32,33,42,45,51,53,55,62,63,65]);
@@ -29,7 +29,7 @@ function generateDungeon(){
   const ai=Math.floor(Math.random()*anchors.length),[ax,ay,dx,dy]=anchors.splice(ai,1)[0],roll=d66(),kind=corridorRolls.has(roll)?"corridor":"room";
   const len=kind==="corridor"?2+Math.floor(Math.random()*2):1,cells:Array<[number,number]>=[];
   let x=ax,y=ay;for(let i=0;i<len;i++){x+=dx;y+=dy;if(x<=0||x>=W-1||y<=0||y>=H-1)break;cells.push([x,y])}
-  if(kind==="room"&&cells.length){const [cx,cy]=cells[cells.length-1],px=-dy,py=dx;for(const side of [-1,1])for(let depth=0;depth<2;depth++){const rx=cx+px*side+dx*depth,ry=cy+py*side+dy*depth;if(rx>0&&rx<W-1&&ry>0&&ry<H-1)cells.push([rx,ry])}}
+  if(kind==="room"&&cells.length){const [cx,cy]=cells[cells.length-1],px=-dy,py=dx;for(let depth=0;depth<3;depth++)for(let side=-2;side<=2;side++){const rx=cx+px*side+dx*depth,ry=cy+py*side+dy*depth;if(rx>0&&rx<W-1&&ry>0&&ry<H-1)cells.push([rx,ry])}}
   const fresh=cells.filter(([cx,cy])=>MAP[cy][cx]===1);if(!fresh.length)continue;sectionDoors.add(doorEdge(ax,ay,fresh[0][0],fresh[0][1]));carveRegion(kind,roll,fresh);
   const [ex,ey]=fresh[fresh.length-1];anchors.push([ex,ey,dx,dy],[ex,ey,-dy,dx],[ex,ey,dy,-dx])
  }
@@ -44,7 +44,7 @@ const party:Hero[]=[
  {id:"elara",name:"Elara",className:"wizard",level:1,life:3,maxLife:3,equipment:["light weapon","spellbook","writing implements"],resources:{spellSlots:3,lightning:1,fireball:1,protection:1}}
 ];
 const marchingOrder=[0,1,2,3];
-const player={x:5,y:9,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>(),failedLocks=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,protectedHero:number|null=null;const acted=new Set<number>();const warden={x:-1,y:-1,hp:3,awake:false,dead:false};
+const player={x:8,y:14,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>(),failedLocks=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,protectedHero:number|null=null;const acted=new Set<number>();const warden={x:-1,y:-1,hp:3,awake:false,dead:false};
 const features=new Map<string,Feature>();const secret={x:-1,y:-1,revealed:true};
 const DRAW=[{sx:0,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:240,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:320,sy:0,sw:160,sh:120,dx:0,dy:0},{sx:480,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:560,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:0,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:120,sw:160,sh:120,dx:0,dy:0},{sx:320,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:400,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:480,sy:120,sw:160,sh:120,dx:0,dy:0}];
 const VIEW:Array<[number,number,number]>=[[2,-2,0],[2,2,1],[2,-1,2],[2,1,3],[2,0,4],[1,-2,5],[1,2,6],[1,-1,7],[1,1,8],[1,0,9],[0,-1,10],[0,1,11],[0,0,12]];
