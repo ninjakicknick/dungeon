@@ -68,8 +68,26 @@ function worldOffset(f:number,r:number):[number,number]{const d=dirs[player.faci
 function drawSheet(img:HTMLImageElement,p:number){const a=DRAW[p];ctx.drawImage(img,a.sx,a.sy,a.sw,a.sh,a.dx,a.dy,a.sw,a.sh)}
 function drawBillboard(img:HTMLImageElement,f:number,r:number,src?:{x:number,y:number,w:number,h:number}){if(f<1||f>2||Math.abs(r)>1)return;const w=f===1?90:42,h=f===1?88:41,x=80+r*(f===1?42:25)-w/2,floorY=f===1?112:88,y=floorY-h;if(src)ctx.drawImage(img,src.x,src.y,src.w,src.h,Math.round(x),Math.round(y),w,h);else ctx.drawImage(img,Math.round(x),Math.round(y),w,h)}
 function reveal(){
- visited.add(key(player.x,player.y));
- for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]])seenEdges.add(doorEdge(player.x,player.y,player.x+dx,player.y+dy))
+ // Mapping follows sight, not footsteps: reveal every floor cell with an unobstructed view from here.
+ // Doors are opaque thresholds, so they reveal themselves but not the space beyond until crossed.
+ const px=player.x,py=player.y,visible=new Set<string>();
+ for(let y=Math.max(0,py-8);y<=Math.min(H-1,py+8);y++)for(let x=Math.max(0,px-8);x<=Math.min(W-1,px+8);x++){
+  if(tileAt(x,y)!==0)continue;
+  const dx=x-px,dy=y-py,steps=Math.max(Math.abs(dx),Math.abs(dy));let lx=px,ly=py,clear=true;
+  for(let i=1;i<=steps;i++){
+   const nx=Math.round(px+dx*i/steps),ny=Math.round(py+dy*i/steps);
+   if(nx===lx&&ny===ly)continue;
+   if(sectionDoors.has(doorEdge(lx,ly,nx,ny))){clear=false;break}
+   if(tileAt(nx,ny)!==0){clear=false;break}
+   lx=nx;ly=ny
+  }
+  if(clear)visible.add(key(x,y))
+ }
+ visible.add(key(px,py));
+ for(const v of visible){
+  visited.add(v);const [x,y]=v.split(",").map(Number);
+  for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]])seenEdges.add(doorEdge(x,y,x+dx,y+dy))
+ }
 }
 function renderMap(){
  const s=5,vw=Math.floor(mapCanvas.width/s),vh=Math.floor(mapCanvas.height/s),ox=Math.max(0,Math.min(W-vw,player.x-Math.floor(vw/2))),oy=Math.max(0,Math.min(H-vh,player.y-Math.floor(vh/2)));
