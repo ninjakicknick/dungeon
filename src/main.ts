@@ -8,20 +8,31 @@ ctx.imageSmoothingEnabled=false;mapCtx.imageSmoothingEnabled=false;
 const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Image(),ceiling:new Image(),chest:new Image(),pillar:new Image(),skulls:new Image(),speaker:new Image(),skeleton:new Image(),minimap:new Image(),cursor:new Image()};
 for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wall.png",door:"dungeon_door.png",locked:"locked_door.png",ceiling:"dungeon_ceiling.png",chest:"chest_exterior.png",pillar:"pillar_interior.png",skulls:"skull_pile.png",speaker:"death_speaker.png",skeleton:"skeleton.png",minimap:"minimap.png",cursor:"minimap_cursor.png"})) atlas[k as keyof typeof atlas].src=new URL(`../assets/${file}`,import.meta.url).href;
 
-// 0 floor, 1 wall, 2 door, 3 locked door. A deliberately authored place, not a generated maze.
-const MAP:Tile[][]=[
- [1,1,1,1,1,1,1,1,1,1,1,1],
- [1,0,0,0,1,0,0,0,0,0,0,1],
- [1,0,0,0,1,0,0,0,0,0,0,1],
- [1,0,0,0,2,0,0,0,0,0,0,1],
- [1,1,0,1,1,0,0,0,0,1,0,1],
- [1,0,0,0,0,0,1,1,1,1,0,1],
- [1,0,0,0,0,0,1,0,0,0,0,1],
- [1,0,0,0,0,0,1,0,0,0,0,1],
- [1,1,0,1,1,1,1,0,0,0,0,1],
- [1,0,0,0,0,0,0,3,0,0,0,1],
- [1,1,1,1,1,1,1,1,1,1,1,1],
-];
+// 0 floor, 1 wall, 2 door, 3 locked door. The floor is rolled fresh each expedition.
+const W=12,H=11,MAP:Tile[][]=Array.from({length:H},()=>Array<Tile>(W).fill(1));
+type Region={id:number,kind:"room"|"corridor",roll:number,cells:Array<[number,number]>,content?:string};
+const regions:Region[]=[],regionAt=new Map<string,number>(),resolvedRegions=new Set<number>();
+const corridorRolls=new Set([11,12,13,14,26,32,33,42,45,51,53,55,62,63,65]);
+function plainD6(){return 1+Math.floor(Math.random()*6)}
+function d66(){return plainD6()*10+plainD6()}
+function carveRegion(kind:"room"|"corridor",roll:number,cells:Array<[number,number]>){
+ const id=regions.length,r={id,kind,roll,cells} as Region;regions.push(r);
+ for(const[x,y]of cells)if(x>0&&x<W-1&&y>0&&y<H-1){MAP[y][x]=0;regionAt.set(`${x},${y}`,id)}
+}
+function generateDungeon(){
+ // First room: no content roll, as in 4AD.
+ carveRegion("room",0,[[4,8],[5,8],[6,8],[4,9],[5,9],[6,9]]);
+ const anchors:Array<[number,number,number,number]>=[[5,8,0,-1],[4,8,-1,0],[6,8,1,0]];
+ for(let n=0;n<10&&anchors.length;n++){
+  const ai=Math.floor(Math.random()*anchors.length),[ax,ay,dx,dy]=anchors.splice(ai,1)[0],roll=d66(),kind=corridorRolls.has(roll)?"corridor":"room";
+  const len=kind==="corridor"?2+Math.floor(Math.random()*2):1,cells:Array<[number,number]>=[];
+  let x=ax,y=ay;for(let i=0;i<len;i++){x+=dx;y+=dy;if(x<=0||x>=W-1||y<=0||y>=H-1)break;cells.push([x,y])}
+  if(kind==="room"&&cells.length){const [cx,cy]=cells[cells.length-1],px=-dy,py=dx;for(const side of [-1,1])for(let depth=0;depth<2;depth++){const rx=cx+px*side+dx*depth,ry=cy+py*side+dy*depth;if(rx>0&&rx<W-1&&ry>0&&ry<H-1)cells.push([rx,ry])}}
+  const fresh=cells.filter(([cx,cy])=>MAP[cy][cx]===1);if(!fresh.length)continue;carveRegion(kind,roll,fresh);
+  const [ex,ey]=fresh[fresh.length-1];anchors.push([ex,ey,dx,dy],[ex,ey,-dy,dx],[ex,ey,dy,-dx])
+ }
+}
+generateDungeon();
 type HeroClass="warrior"|"cleric"|"rogue"|"wizard";
 type Hero={id:string,name:string,className:HeroClass,level:number,life:number,maxLife:number,equipment:string[],resources:Record<string,number>};
 const party:Hero[]=[
@@ -31,9 +42,8 @@ const party:Hero[]=[
  {id:"elara",name:"Elara",className:"wizard",level:1,life:3,maxLife:3,equipment:["light weapon","spellbook","writing implements"],resources:{spellSlots:3,lightning:1,fireball:1,protection:1}}
 ];
 const marchingOrder=[0,1,2,3];
-const player={x:1,y:9,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>(),failedLocks=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,protectedHero:number|null=null;const acted=new Set<number>();const warden={x:5,y:9,hp:3,awake:false,dead:false};
-const features=new Map<string,Feature>([["2,2","pillar"],["3,6","skulls"],["7,3","speaker"],["10,7","chest"]]);
-const secret={x:7,y:9,revealed:false};
+const player={x:5,y:9,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>(),failedLocks=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,protectedHero:number|null=null;const acted=new Set<number>();const warden={x:-1,y:-1,hp:3,awake:false,dead:false};
+const features=new Map<string,Feature>();const secret={x:-1,y:-1,revealed:true};
 const DRAW=[{sx:0,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:240,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:320,sy:0,sw:160,sh:120,dx:0,dy:0},{sx:480,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:560,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:0,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:120,sw:160,sh:120,dx:0,dy:0},{sx:320,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:400,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:480,sy:120,sw:160,sh:120,dx:0,dy:0}];
 const VIEW:Array<[number,number,number]>=[[2,-2,0],[2,2,1],[2,-1,2],[2,1,3],[2,0,4],[1,-2,5],[1,2,6],[1,-1,7],[1,1,8],[1,0,9],[0,-1,10],[0,1,11],[0,0,12]];
 const dirs=[{fx:0,fy:-1,rx:1,ry:0},{fx:1,fy:0,rx:0,ry:1},{fx:0,fy:1,rx:-1,ry:0},{fx:-1,fy:0,rx:0,ry:-1}];
@@ -42,7 +52,7 @@ function worldOffset(f:number,r:number):[number,number]{const d=dirs[player.faci
 function drawSheet(img:HTMLImageElement,p:number){const a=DRAW[p];ctx.drawImage(img,a.sx,a.sy,a.sw,a.sh,a.dx,a.dy,a.sw,a.sh)}
 function drawBillboard(img:HTMLImageElement,f:number,r:number,src?:{x:number,y:number,w:number,h:number}){if(f<1||f>2||Math.abs(r)>1)return;const w=f===1?90:42,h=f===1?88:41,x=80+r*(f===1?42:25)-w/2,floorY=f===1?112:88,y=floorY-h;if(src)ctx.drawImage(img,src.x,src.y,src.w,src.h,Math.round(x),Math.round(y),w,h);else ctx.drawImage(img,Math.round(x),Math.round(y),w,h)}
 function reveal(){visited.add(key(player.x,player.y));for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]])visited.add(key(player.x+dx,player.y+dy))}
-function renderMap(){const s=5;mapCtx.fillStyle="#08060a";mapCtx.fillRect(0,0,60,55);for(let y=0;y<11;y++)for(let x=0;x<12;x++){if(!visited.has(key(x,y)))continue;const t=tileAt(x,y);mapCtx.fillStyle=t===1?"#251b17":t===2?"#8f563b":t===3?"#5e342c":"#b86f43";mapCtx.fillRect(x*s,y*s,s-1,s-1)}mapCtx.fillStyle="#d7e7cf";mapCtx.fillRect(player.x*s+1,player.y*s+1,3,3)}
+function renderMap(){const s=5;mapCtx.fillStyle="#08060a";mapCtx.fillRect(0,0,60,55);for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(!visited.has(key(x,y)))continue;const t=tileAt(x,y);mapCtx.fillStyle=t===1?"#251b17":t===2?"#8f563b":t===3?"#5e342c":"#b86f43";mapCtx.fillRect(x*s,y*s,s-1,s-1)}mapCtx.fillStyle="#d7e7cf";mapCtx.fillRect(player.x*s+1,player.y*s+1,3,3)}
 function featureAt(x:number,y:number){return features.get(key(x,y))}
 function targetFeature(){const[x,y]=worldOffset(1,0);return {x,y,feature:featureAt(x,y)}}
 function monsterAt(x:number,y:number){return warden.awake&&!warden.dead&&warden.x===x&&warden.y===y}
@@ -54,7 +64,7 @@ function render(){reveal();keyStatus.hidden=!hasSilverKey;renderParty();ctx.fill
 function say(t:string){message.textContent=t}
 function wait(ms:number){return new Promise<void>(r=>setTimeout(r,ms))}
 function d6(){let total=0,die=0;do{die=1+Math.floor(Math.random()*6);total+=die}while(die===6);return total}
-function isRoom(x=player.x,y=player.y){let exits=0;for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]])if(tileAt(x+dx,y+dy)===0)exits++;return exits>=3}
+function isRoom(x=player.x,y=player.y){const id=regionAt.get(key(x,y));return id!==undefined&&regions[id]?.kind==="room"}
 function heroCanAct(i:number){if(isRoom())return true;const pos=marchingOrder.indexOf(i);return pos<2||party[i].className==="wizard"}
 function heroAttackBonus(hero:Hero){if(hero.className==="warrior")return hero.level;if(hero.className==="cleric")return hero.level;/* undead */if(hero.className==="rogue")return hero.level-1;/* outnumbers this lone Minor-style foe; light weapon -1 */return -1}
 function showClericActions(){clericActions.hidden=false;healTargets.hidden=true;document.querySelectorAll<HTMLElement>(".party-actions").forEach(el=>el.hidden=true)}
@@ -62,11 +72,7 @@ function hideClericActions(){clericActions.hidden=true;healTargets.hidden=true;d
 function showHealTargets(){clericActions.hidden=true;healTargets.hidden=false;document.querySelectorAll<HTMLButtonElement>("[data-heal]").forEach(b=>{const i=Number(b.dataset.heal);if(i>=0)b.disabled=party[i].life>=party[i].maxLife})}
 function showWizardActions(){wizardActions.hidden=false;document.querySelectorAll<HTMLElement>(".party-actions").forEach(el=>el.hidden=true);for(const name of ["lightning","fireball","protection"]){const b=document.querySelector<HTMLButtonElement>(`[data-spell="${name}"]`);if(b)b.disabled=(party[3].resources[name]??0)<=0}}
 function hideWizardActions(){wizardActions.hidden=true;document.querySelectorAll<HTMLElement>(".party-actions").forEach(el=>el.hidden=false)}
-function heroButtons(){document.querySelectorAll<HTMLButtonElement>("[data-prayer]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();void clericChoice(b.dataset.prayer!)}));
-document.querySelectorAll<HTMLButtonElement>("[data-heal]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();void healHero(Number(b.dataset.heal))}));
-document.querySelectorAll<HTMLButtonElement>("[data-spell]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();void castSpell(b.dataset.spell!)}));
-document.querySelectorAll<HTMLButtonElement>("[data-lock]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();lockChoice(b.dataset.lock!)}));
-document.querySelectorAll<HTMLButtonElement>("[data-hero]").forEach((b,i)=>{b.disabled=acted.has(i)||party[i].life<=0||!heroCanAct(i);b.title=!heroCanAct(i)?"Rear rank: melee cannot reach in a corridor":""})}
+function heroButtons(){document.querySelectorAll<HTMLButtonElement>("[data-hero]").forEach((b,i)=>{b.disabled=acted.has(i)||party[i].life<=0||!heroCanAct(i);b.title=!heroCanAct(i)?"Rear rank: melee cannot reach in a corridor":""})}
 function showEncounter(){
  inEncounter=true;acted.clear();protectedHero=null;hideWizardActions();hideClericActions();document.body.classList.add("in-encounter");encounter.hidden=false;wardenHp.textContent="◆ ".repeat(warden.hp).trim();battleSpace.textContent=isRoom()?"ROOM":"CORRIDOR";roll.textContent=isRoom()?"Your turn · all heroes can fight":"Your turn · front rank fights; Elara can cast from the rear";say("The skeleton raises its rusted blade.");heroButtons()
 }
@@ -119,11 +125,32 @@ async function castSpell(name:string){
  if(warden.hp<=0){warden.dead=true;hideEncounter();say("Magic tears through the skeleton. Its bones scatter across the floor.");render();return}
  const eligible=party.map((h,i)=>h.life>0&&heroCanAct(i)?i:-1).filter(i=>i>=0);if(eligible.every(i=>acted.has(i)))await foeTurn()
 }
-function step(a:1|-1){const[x,y]=worldOffset(a,0),t=tileAt(x,y),f=featureAt(x,y);if(monsterAt(x,y)){showEncounter();render();return}if(t===2&&a===1){MAP[y][x]=0;say("The old door yields with a groan.");render();return}if(t===3){say("No handle. No lock. Just a slab fitted too neatly into the wall.");render();return}if(t===1){say("Cold stone blocks the way.");render();return}if(f){say(f==="pillar"?"The carved pillar blocks the passage.":f==="skulls"?"A deliberate pile of bones blocks your step.":f==="speaker"?"The stone figure bars the way.":"The battered chest blocks the way.");render();return}player.x=x;player.y=y;say("Your footsteps echo in the dark.");render()}
+function contentFor(total:number,kind:"room"|"corridor"){
+ if(total===2)return "TREASURE";
+ if(total===3)return "TRAPPED TREASURE";
+ if(total===4)return kind==="corridor"?"EMPTY":"SPECIAL EVENT";
+ if(total===5)return "SPECIAL FEATURE";
+ if(total===6)return "VERMIN";
+ if(total===7)return "MINIONS";
+ if(total===8)return kind==="corridor"?"EMPTY":"MINIONS";
+ if(total===9)return "EMPTY";
+ if(total===10)return kind==="corridor"?"EMPTY":"WEIRD MONSTER";
+ if(total===11)return "BOSS";
+ return kind==="corridor"?"EMPTY":"DRAGON LAIR"
+}
+function resolveRegion(x:number,y:number){
+ const id=regionAt.get(key(x,y));if(id===undefined||id===0||resolvedRegions.has(id))return "";
+ resolvedRegions.add(id);const r=regions[id],a=plainD6(),b=plainD6(),total=a+b,content=contentFor(total,r.kind);r.content=content;
+ if(content==="TREASURE"||content==="TRAPPED TREASURE"){features.set(key(x,y),"chest")}
+ else if(content==="SPECIAL FEATURE"){features.set(key(x,y),["pillar","skulls","speaker"][Math.floor(Math.random()*3)] as Feature)}
+ else if((content==="MINIONS"||content==="BOSS"||content==="WEIRD MONSTER")&&!warden.awake&&!warden.dead){warden.awake=true;warden.x=x;warden.y=y;warden.hp=content==="BOSS"?5:3}
+ return `d66 ${r.roll} · ${r.kind.toUpperCase()} · CONTENT ${a}+${b}=${total}: ${content}`
+}
+function step(a:1|-1){const[x,y]=worldOffset(a,0),t=tileAt(x,y),f=featureAt(x,y);if(monsterAt(x,y)){showEncounter();render();return}if(t===2&&a===1){MAP[y][x]=0;say("The old door yields with a groan.");render();return}if(t===3){showLock();return}if(t===1){say("Cold stone blocks the way.");render();return}if(f){say(f==="pillar"?"The carved pillar blocks the passage.":f==="skulls"?"A deliberate pile of bones blocks your step.":f==="speaker"?"The stone figure bars the way.":"The battered chest blocks the way.");render();return}player.x=x;player.y=y;const discovery=resolveRegion(x,y);say(discovery||"Your footsteps echo in the dark.");render()}
 function turn(a:1|-1){player.facing=((player.facing+a+4)%4)as Facing;say("You turn, listening.");render()}
 function showLock(){const[tx,ty]=worldOffset(1,0);const k=key(tx,ty);lockActions.hidden=false;document.body.classList.add("in-lock");lockRoll.textContent=failedLocks.has(k)?"The picks have slipped. This lock has beaten Nix.":"Nix studies the mechanism.";const pick=document.querySelector<HTMLButtonElement>('[data-lock="pick"]')!,useKey=document.querySelector<HTMLButtonElement>('[data-lock="key"]')!;pick.disabled=failedLocks.has(k);useKey.disabled=!hasSilverKey}
 function hideLock(){lockActions.hidden=true;document.body.classList.remove("in-lock")}
-function unlockDoor(){const[tx,ty]=worldOffset(1,0);MAP[ty][tx]=0;warden.awake=true;warden.x=5;warden.y=9;warden.hp=3;hideLock();say("The lock opens. Beyond it, bone scrapes against stone.");render()}
+function unlockDoor(){const[tx,ty]=worldOffset(1,0);MAP[ty][tx]=0;hideLock();say("The lock opens.");render()}
 function lockChoice(action:string){if(action==="back"){hideLock();return}const[tx,ty]=worldOffset(1,0);if(tileAt(tx,ty)!==3)return;if(action==="key"){if(!hasSilverKey)return;hasSilverKey=false;unlockDoor();return}if(action==="pick"){const k=key(tx,ty);if(failedLocks.has(k))return;const raw=d6(),total=raw+party[2].level;if(total>=3){lockRoll.textContent=`NIX PICKS THE LOCK: ${raw} +1 = ${total} · OPEN`;setTimeout(unlockDoor,350)}else{failedLocks.add(k);lockRoll.textContent=`NIX PICKS THE LOCK: ${raw} +1 = ${total} · FAILED`;document.querySelector<HTMLButtonElement>('[data-lock="pick"]')!.disabled=true}}}
 function use(){const[tx,ty]=worldOffset(1,0);
  if(targetMonster()){showEncounter();render();return;
@@ -136,4 +163,4 @@ function act(a:string){if(busy||inEncounter||!lockActions.hidden)return;if(a==="
 window.addEventListener("keydown",e=>{const actions:Record<string,string>={arrowup:"forward",w:"forward",arrowdown:"back",s:"back",arrowleft:"left",a:"left",arrowright:"right",d:"right",e:"interact"," ":"interact"};const action=actions[e.key.toLowerCase()];if(action){e.preventDefault();act(action)}});
 document.querySelectorAll<HTMLButtonElement>("[data-hero]").forEach((b,i)=>b.addEventListener("pointerdown",e=>{e.preventDefault();void heroAttack(i)}));
 document.querySelectorAll<HTMLButtonElement>("[data-action]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();act(b.dataset.action!)}));
-Promise.all(Object.values(atlas).map(img=>img.decode().catch(()=>new Promise<void>(r=>img.addEventListener("load",()=>r(),{once:true}))))).then(()=>{say("The stair closes behind you. The air smells of wet stone.");render()});
+Promise.all(Object.values(atlas).map(img=>img.decode().catch(()=>new Promise<void>(r=>img.addEventListener("load",()=>r(),{once:true}))))).then(()=>{say("A new dungeon waits. Beyond the first room, nothing has been decided yet.");render()});
