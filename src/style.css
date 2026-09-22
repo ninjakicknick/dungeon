@@ -53,11 +53,11 @@
 .inventory{width:min(100%,28rem);border:3px solid #d7e7cf;background:#0d0910;padding:.55rem}.inventory[hidden]{display:none}.inventory-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem}.inventory-head strong{color:#f6d6a8;font-size:.72rem;letter-spacing:.1em}.inventory-head button,.inventory-item button{border:2px solid #6b3e2e;background:#130d17;color:#d7e7cf;font:inherit;font-weight:900}.inventory-head button{min-height:2rem;padding:.2rem .55rem;font-size:.48rem}.inventory-gold{margin:.35rem 0;padding:.3rem;border-bottom:1px solid #6b3e2e;color:#c99562;font-size:.65rem}.inventory-list{display:grid;gap:.25rem}.inventory-item{display:flex;min-height:2.25rem;align-items:center;justify-content:space-between;gap:.5rem;padding:.3rem;border:1px solid #38241f;background:#130d17;font-size:.58rem}.inventory-item button{min-width:3.2rem;min-height:1.8rem;font-size:.45rem}.inventory-empty{margin:.35rem 0;color:#6f675f;font-size:.58rem}.in-inventory .controls,.in-inventory .interact,.in-inventory .party,.in-inventory .utility-actions{display:none}
 
 /* Keep the party/pack area at a fixed height so opening the pack never re-centers the game viewport. */
-.lower-panel{position:relative;width:min(100%,28rem);min-height:4.25rem;display:grid;align-items:start}
-.lower-panel>.party,.lower-panel>.inventory{grid-area:1/1;width:100%}
-.lower-panel>.inventory{min-height:4.25rem}
-.lower-panel>.utility-actions{position:absolute;right:.18rem;top:-2.65rem;width:auto;z-index:2}
+.lower-panel{position:relative;width:min(100%,28rem);min-height:6.65rem;display:grid;grid-template-rows:auto 2rem;gap:.35rem;align-items:start}
+.lower-panel>.party{grid-row:1;width:100%}
+.lower-panel>.inventory{position:absolute;inset:0;width:100%;min-height:6.65rem;z-index:2}
+.lower-panel>.utility-actions{grid-row:2;width:100%;display:flex;justify-content:flex-end}
 .lower-panel>.utility-actions button{min-width:3.25rem;min-height:2rem;padding:.15rem .4rem;font-size:.46rem}
-.in-inventory .lower-panel{min-height:4.25rem}
+.in-inventory .lower-panel{min-height:6.65rem}
 .in-inventory .lower-panel>.party{visibility:hidden;display:grid}
-.in-inventory .lower-panel>.utility-actions{display:none}
+.in-inventory .lower-panel>.utility-actions{visibility:hidden;display:flex}
