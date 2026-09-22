@@ -22,14 +22,29 @@ function carveRegion(kind:"room"|"corridor",roll:number,cells:Array<[number,numb
  for(const[x,y]of cells)if(x>0&&x<W-1&&y>0&&y<H-1){MAP[y][x]=0;regionAt.set(`${x},${y}`,id)}
 }
 function generateDungeon(){
- const start:Array<[number,number]>=[];for(let y=21;y<=24;y++)for(let x=12;x<=17;x++)start.push([x,y]);carveRegion("room",0,start);
- const anchors:Array<[number,number,number,number]>=[[14,21,0,-1],[12,22,-1,0],[17,22,1,0]];
+ // Rooms stay shallow enough for the two-step renderer, but gain identity from width and shape.
+ const start:Array<[number,number]>=[];for(let y=22;y<=24;y++)for(let x=12;x<=17;x++)start.push([x,y]);carveRegion("room",0,start);
+ const anchors:Array<[number,number,number,number]>=[[14,22,0,-1],[12,23,-1,0],[17,23,1,0]];
  for(let n=0;n<10&&anchors.length;n++){
   const ai=Math.floor(Math.random()*anchors.length),[ax,ay,dx,dy]=anchors.splice(ai,1)[0],roll=d66(),kind=corridorRolls.has(roll)?"corridor":"room",cells:Array<[number,number]>=[];let x=ax,y=ay;
   if(kind==="corridor"){for(let i=0;i<4;i++){x+=dx;y+=dy;if(x<=1||x>=W-2||y<=1||y>=H-2)break;cells.push([x,y])}}
-  else{x+=dx;y+=dy;if(x<=1||x>=W-2||y<=1||y>=H-2)continue;cells.push([x,y]);const px=-dy,py=dx,cx=x+dx*2,cy=y+dy*2;for(let depth=-1;depth<=2;depth++)for(let side=-2;side<=3;side++){const rx=cx+dx*depth+px*side,ry=cy+dy*depth+py*side;if(rx>1&&rx<W-2&&ry>1&&ry<H-2)cells.push([rx,ry])}}
-  const fresh=cells.filter(([cx,cy])=>MAP[cy][cx]===1);if(fresh.length<(kind==="room"?12:2))continue;sectionDoors.add(doorEdge(ax,ay,fresh[0][0],fresh[0][1]));carveRegion(kind,roll,fresh);
-  const candidates=fresh.filter(([cx,cy])=>Math.abs(cx-ax)+Math.abs(cy-ay)>=3);if(!candidates.length)continue;const [ex,ey]=candidates[candidates.length-1];anchors.push([ex,ey,dx,dy],[ex,ey,-dy,dx],[ex,ey,dy,-dx])
+  else{
+   x+=dx;y+=dy;if(x<=1||x>=W-2||y<=1||y>=H-2)continue;cells.push([x,y]);
+   const px=-dy,py=dx,cx=x+dx,cy=y+dy,shape=roll%3;
+   // All shapes are only three cells deep. Width/alcoves make them feel substantial.
+   for(let depth=0;depth<3;depth++)for(let side=-2;side<=2;side++){
+    let include=true;
+    if(shape===1&&depth===2&&Math.abs(side)===2)include=false; // clipped far corners
+    if(shape===2&&depth===0&&side===-2)include=false;         // offset alcove/asymmetry
+    if(!include)continue;
+    const rx=cx+dx*depth+px*side,ry=cy+dy*depth+py*side;if(rx>1&&rx<W-2&&ry>1&&ry<H-2)cells.push([rx,ry])
+   }
+   if(shape===2){const rx=cx+dx+px*3,ry=cy+dy+py*3;if(rx>1&&rx<W-2&&ry>1&&ry<H-2)cells.push([rx,ry])}
+  }
+  const fresh=cells.filter(([cx,cy])=>MAP[cy][cx]===1);if(fresh.length<(kind==="room"?9:2))continue;
+  sectionDoors.add(doorEdge(ax,ay,fresh[0][0],fresh[0][1]));carveRegion(kind,roll,fresh);
+  const candidates=fresh.filter(([cx,cy])=>Math.abs(cx-ax)+Math.abs(cy-ay)>=2);if(!candidates.length)continue;
+  const [ex,ey]=candidates[candidates.length-1];anchors.push([ex,ey,dx,dy],[ex,ey,-dy,dx],[ex,ey,dy,-dx])
  }
 }
 generateDungeon();
