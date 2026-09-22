@@ -11,7 +11,8 @@ for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wa
 // 0 floor, 1 wall, 2 door, 3 locked door. The floor is rolled fresh each expedition.
 const W=30,H=26,MAP:Tile[][]=Array.from({length:H},()=>Array<Tile>(W).fill(1));
 type Region={id:number,kind:"room"|"corridor",roll:number,cells:Array<[number,number]>,content?:string};
-const regions:Region[]=[],regionAt=new Map<string,number>(),resolvedRegions=new Set<number>(),sectionDoors=new Set<string>();
+const regions:Region[]=[],regionAt=new Map<string,number>(),resolvedRegions=new Set<number>(),sectionDoors=new Set<string>(),searchedRegions=new Set<number>();
+let clues=0;
 const corridorRolls=new Set([11,12,13,14,26,32,33,42,45,51,53,55,62,63,65]);
 function plainD6(){return 1+Math.floor(Math.random()*6)}
 function d66(){return plainD6()*10+plainD6()}
@@ -132,7 +133,27 @@ function targetFeature(){const[x,y]=worldOffset(1,0);return {x,y,feature:feature
 function monsterAt(x:number,y:number){return warden.awake&&!warden.dead&&warden.x===x&&warden.y===y}
 function targetMonster(){const[x,y]=worldOffset(1,0);return monsterAt(x,y)}
 function drawMonster(){if(!warden.awake||warden.dead)return;const d=dirs[player.facing],dx=warden.x-player.x,dy=warden.y-player.y,f=dx*d.fx+dy*d.fy,r=dx*d.rx+dy*d.ry;if(f<1||f>2||Math.abs(r)>1)return;const first=worldOffset(1,r),blocked=f===2&&(tileAt(...first)!==0||sectionDoors.has(doorEdge(player.x,player.y,first[0],first[1])));if(blocked)return;const img=atlas[warden.sprite];ctx.save();if(monsterShake)ctx.translate(monsterShake,0);if(warden.sprite==="skeleton")drawBillboard(img,f,r,{x:52,y:34,w:82,h:80});else drawBillboard(img,f,r);ctx.restore()}
-function updateInteract(){const target=targetFeature(),[tx,ty]=worldOffset(1,0),atMonster=targetMonster(),atLocked=tileAt(tx,ty)===3,atSecret=player.x===8&&player.y===9&&!secret.revealed&&player.facing===3,available=!!target.feature||atSecret||atLocked||atMonster;interact.hidden=false;interact.style.visibility=available?"visible":"hidden";interact.style.pointerEvents=available?"auto":"none";interact.textContent=atMonster?"ATTACK":target.feature==="chest"?"OPEN":target.feature?"EXAMINE":atLocked?"LOCK":atSecret?"EXAMINE":""}
+function searchableHere(){
+ const id=regionAt.get(key(player.x,player.y));if(id===undefined||id===0||searchedRegions.has(id)||regions[id]?.content!=="EMPTY")return false;
+ const[tx,ty]=worldOffset(1,0);return tileAt(tx,ty)===1&&tx>1&&tx<W-2&&ty>1&&ty<H-2
+}
+function carveSecretDoor(){
+ const[tx,ty]=worldOffset(1,0),d=dirs[player.facing],cells:Array<[number,number]>=[];let x=tx,y=ty;
+ for(let i=0;i<2;i++){if(x<=1||x>=W-2||y<=1||y>=H-2||MAP[y][x]!==1)return false;cells.push([x,y]);x+=d.fx;y+=d.fy}
+ const px=-d.fy,py=d.fx,room:Array<[number,number]>=[];for(let depth=0;depth<3;depth++)for(let side=-2;side<=2;side++){const rx=x+d.fx*depth+px*side,ry=y+d.fy*depth+py*side;if(rx<=1||rx>=W-2||ry<=1||ry>=H-2||MAP[ry][rx]!==1)return false;room.push([rx,ry])}
+ const roll=d66();sectionDoors.add(doorEdge(player.x,player.y,tx,ty));carveRegion("corridor",d66(),cells);carveRegion("room",roll,room);return true
+}
+function searchHere(){
+ const id=regionAt.get(key(player.x,player.y));if(id===undefined||!searchableHere())return false;searchedRegions.add(id);
+ const raw=plainD6(),r=regions[id],score=raw-(r.kind==="corridor"?1:0);
+ // 4AD safeguard: once every generated branch has actually been explored without a Boss, don't let geometry end the adventure.
+ const exhausted=regions.slice(1).every(region=>resolvedRegions.has(region.id)),bossSeen=regions.some(region=>region.content==="BOSS"||region.content==="DRAGON LAIR");
+ if((score>=5||exhausted&&!bossSeen)&&carveSecretDoor()){say(exhausted&&!bossSeen?"The dungeon seems spent—but a hollow stone answers your search. A hidden door opens onto darkness.":`SEARCH ${raw}${r.kind==="corridor"?" -1":""}: a seam appears in the stone. A secret door!`);render();return true}
+ if(score>=5){clues++;say(`SEARCH ${raw}${r.kind==="corridor"?" -1":""}: you uncover a Clue. The party now has ${clues}.`);render();return true}
+ if(score<=1){say(`SEARCH ${raw}${r.kind==="corridor"?" -1":""}: something moves in the darkness. Wandering Monsters are close.`);render();return true}
+ say(`SEARCH ${raw}${r.kind==="corridor"?" -1":""}: nothing. The stones keep their secrets.`);render();return true
+}
+function updateInteract(){const target=targetFeature(),[tx,ty]=worldOffset(1,0),atMonster=targetMonster(),atLocked=tileAt(tx,ty)===3,atSecret=player.x===8&&player.y===9&&!secret.revealed&&player.facing===3,atSearch=searchableHere(),available=!!target.feature||atSecret||atLocked||atMonster||atSearch;interact.hidden=false;interact.style.visibility=available?"visible":"hidden";interact.style.pointerEvents=available?"auto":"none";interact.textContent=atMonster?"ATTACK":target.feature==="chest"?"OPEN":target.feature?"EXAMINE":atLocked?"LOCK":atSecret?"EXAMINE":atSearch?"SEARCH":""}
 function renderParty(){elaraSpells.textContent=String(party[3].resources.spellSlots);maraHeals.textContent=String(party[1].resources.healing);for(const hero of party){const el=document.querySelector<HTMLElement>(`#life-${hero.id}`);if(el)el.textContent=`♥ ${hero.life}/${hero.maxLife}`}}
 function render(){reveal();keyStatus.hidden=!hasSilverKey;lootStatus.textContent=`${gold} GP${loot.length?` · ${loot.length} ITEM${loot.length===1?"":"S"}`:""}`;renderParty();ctx.fillStyle=hitFlash?"#f6d6a8":"#000";ctx.fillRect(0,0,160,120);for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r);if(tileAt(x,y)!==1){drawSheet(atlas.ceiling,p);drawSheet(atlas.floor,p)}}for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r),t=tileAt(x,y),[px,py]=worldOffset(f-1,r),door=sectionDoors.has(doorEdge(px,py,x,y));if(door)drawSheet(atlas.door,p);else if(t===1)drawSheet(atlas.wall,p);else if(t===2)drawSheet(atlas.door,p);else if(t===3)drawSheet(atlas.locked,p);else{const ft=features.get(key(x,y));if(ft&&!used.has(key(x,y))){if(ft==="speaker")drawBillboard(atlas.speaker,f,r);else drawSheet(atlas[ft],p);}}}drawMonster();renderMap();updateInteract()}
 function say(t:string){message.textContent=t}
@@ -253,6 +274,7 @@ function hideLock(){lockActions.hidden=true;document.body.classList.remove("in-l
 function unlockDoor(){const[tx,ty]=worldOffset(1,0);MAP[ty][tx]=0;hideLock();say("The lock opens.");render()}
 function lockChoice(action:string){if(action==="back"){hideLock();return}const[tx,ty]=worldOffset(1,0);if(tileAt(tx,ty)!==3)return;if(action==="key"){if(!hasSilverKey)return;hasSilverKey=false;unlockDoor();return}if(action==="pick"){const k=key(tx,ty);if(failedLocks.has(k))return;const raw=d6(),total=raw+party[2].level;if(total>=3){lockRoll.textContent=`NIX PICKS THE LOCK: ${raw} +1 = ${total} · OPEN`;setTimeout(unlockDoor,350)}else{failedLocks.add(k);lockRoll.textContent=`NIX PICKS THE LOCK: ${raw} +1 = ${total} · FAILED`;document.querySelector<HTMLButtonElement>('[data-lock="pick"]')!.disabled=true}}}
 function use(){const[tx,ty]=worldOffset(1,0);
+ if(searchableHere()){searchHere();return}
  if(targetMonster()){showEncounter();render();return;
  }if(false){
   const damage=1+Math.floor(Math.random()*3);warden.hp-=damage;
