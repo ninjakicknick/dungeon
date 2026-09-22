@@ -3,7 +3,7 @@ type Facing=0|1|2|3; type Tile=0|1|2|3;
 type Feature="chest"|"pillar"|"skulls"|"speaker";
 const canvas=document.querySelector<HTMLCanvasElement>("#game")!,ctx=canvas.getContext("2d")!;
 const mapCanvas=document.querySelector<HTMLCanvasElement>("#map")!,mapCtx=mapCanvas.getContext("2d")!;
-const encounter=document.querySelector<HTMLElement>("#encounter")!,roll=document.querySelector<HTMLElement>("#roll")!,wardenHp=document.querySelector<HTMLElement>("#warden-hp")!,message=document.querySelector<HTMLElement>("#message")!,interact=document.querySelector<HTMLButtonElement>("#interact")!,keyStatus=document.querySelector<HTMLElement>("#key-status")!,hpStatus=document.querySelector<HTMLElement>("#hp-status")!;
+const encounter=document.querySelector<HTMLElement>("#encounter")!,roll=document.querySelector<HTMLElement>("#roll")!,wardenHp=document.querySelector<HTMLElement>("#warden-hp")!,message=document.querySelector<HTMLElement>("#message")!,interact=document.querySelector<HTMLButtonElement>("#interact")!,keyStatus=document.querySelector<HTMLElement>("#key-status")!;
 ctx.imageSmoothingEnabled=false;mapCtx.imageSmoothingEnabled=false;
 const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Image(),ceiling:new Image(),chest:new Image(),pillar:new Image(),skulls:new Image(),speaker:new Image(),skeleton:new Image(),minimap:new Image(),cursor:new Image()};
 for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wall.png",door:"dungeon_door.png",locked:"locked_door.png",ceiling:"dungeon_ceiling.png",chest:"chest_exterior.png",pillar:"pillar_interior.png",skulls:"skull_pile.png",speaker:"death_speaker.png",skeleton:"skeleton.png",minimap:"minimap.png",cursor:"minimap_cursor.png"})) atlas[k as keyof typeof atlas].src=new URL(`../assets/${file}`,import.meta.url).href;
@@ -22,7 +22,15 @@ const MAP:Tile[][]=[
  [1,0,0,0,0,0,0,3,0,0,0,1],
  [1,1,1,1,1,1,1,1,1,1,1,1],
 ];
-const player={x:1,y:9,facing:0 as Facing,hp:6},visited=new Set<string>(),used=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,guarded=false,opening=false;const warden={x:5,y:9,hp:3,awake:false,dead:false};
+type HeroClass="warrior"|"cleric"|"rogue"|"wizard";
+type Hero={id:string,name:string,className:HeroClass,level:number,life:number,maxLife:number,equipment:string[],resources:Record<string,number>};
+const party:Hero[]=[
+ {id:"bram",name:"Bram",className:"warrior",level:1,life:7,maxLife:7,equipment:["light armor","shield","hand weapon"],resources:{}},
+ {id:"mara",name:"Mara",className:"cleric",level:1,life:5,maxLife:5,equipment:["light armor","shield","hand weapon"],resources:{healing:3,blessing:3}},
+ {id:"nix",name:"Nix",className:"rogue",level:1,life:4,maxLife:4,equipment:["light armor","light weapon","rope","lock-picks"],resources:{}},
+ {id:"elara",name:"Elara",className:"wizard",level:1,life:3,maxLife:3,equipment:["light weapon","spellbook","writing implements"],resources:{spellSlots:3}}
+];
+const player={x:1,y:9,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,guarded=false,opening=false;const warden={x:5,y:9,hp:3,awake:false,dead:false};
 const features=new Map<string,Feature>([["2,2","pillar"],["3,6","skulls"],["7,3","speaker"],["10,7","chest"]]);
 const secret={x:7,y:9,revealed:false};
 const DRAW=[{sx:0,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:240,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:320,sy:0,sw:160,sh:120,dx:0,dy:0},{sx:480,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:560,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:0,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:120,sw:160,sh:120,dx:0,dy:0},{sx:320,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:400,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:480,sy:120,sw:160,sh:120,dx:0,dy:0}];
@@ -40,7 +48,8 @@ function monsterAt(x:number,y:number){return warden.awake&&!warden.dead&&warden.
 function targetMonster(){const[x,y]=worldOffset(1,0);return monsterAt(x,y)}
 function drawMonster(){if(!warden.awake||warden.dead)return;const d=dirs[player.facing],dx=warden.x-player.x,dy=warden.y-player.y,f=dx*d.fx+dy*d.fy,r=dx*d.rx+dy*d.ry;if(f<1||f>2||Math.abs(r)>1)return;const blocked=f===2&&tileAt(...worldOffset(1,r))!==0;if(blocked)return;drawBillboard(atlas.skeleton,f,r,{x:52,y:34,w:82,h:80})}
 function updateInteract(){const target=targetFeature(),[tx,ty]=worldOffset(1,0),atMonster=targetMonster(),atLocked=tileAt(tx,ty)===3,atSecret=player.x===8&&player.y===9&&!secret.revealed&&player.facing===3,available=!!target.feature||atSecret||atLocked||atMonster;interact.hidden=false;interact.style.visibility=available?"visible":"hidden";interact.style.pointerEvents=available?"auto":"none";interact.textContent=atMonster?"ATTACK":target.feature==="chest"?"OPEN":target.feature?"EXAMINE":atLocked?(hasSilverKey?"UNLOCK":"EXAMINE"):atSecret?"EXAMINE":""}
-function render(){reveal();keyStatus.hidden=!hasSilverKey;hpStatus.textContent=`HP ${player.hp}`;ctx.fillStyle=hitFlash?"#f6d6a8":"#000";ctx.fillRect(0,0,160,120);for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r);if(tileAt(x,y)!==1){drawSheet(atlas.ceiling,p);drawSheet(atlas.floor,p)}}for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r),t=tileAt(x,y);if(t===1)drawSheet(atlas.wall,p);else if(t===2)drawSheet(atlas.door,p);else if(t===3)drawSheet(atlas.locked,p);else{const ft=features.get(key(x,y));if(ft&&!used.has(key(x,y))){if(ft==="speaker")drawBillboard(atlas.speaker,f,r);else drawSheet(atlas[ft],p);}}}drawMonster();renderMap();updateInteract()}
+function renderParty(){for(const hero of party){const el=document.querySelector<HTMLElement>(`#life-${hero.id}`);if(el)el.textContent=`♥ ${hero.life}/${hero.maxLife}`}}
+function render(){reveal();keyStatus.hidden=!hasSilverKey;renderParty();ctx.fillStyle=hitFlash?"#f6d6a8":"#000";ctx.fillRect(0,0,160,120);for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r);if(tileAt(x,y)!==1){drawSheet(atlas.ceiling,p);drawSheet(atlas.floor,p)}}for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r),t=tileAt(x,y);if(t===1)drawSheet(atlas.wall,p);else if(t===2)drawSheet(atlas.door,p);else if(t===3)drawSheet(atlas.locked,p);else{const ft=features.get(key(x,y));if(ft&&!used.has(key(x,y))){if(ft==="speaker")drawBillboard(atlas.speaker,f,r);else drawSheet(atlas[ft],p);}}}drawMonster();renderMap();updateInteract()}
 function say(t:string){message.textContent=t}
 function wait(ms:number){return new Promise<void>(r=>setTimeout(r,ms))}
 function showEncounter(){
@@ -51,10 +60,10 @@ async function openingAttack(){busy=true;await wait(180);roll.textContent="The s
 async function enemyReply(){
  busy=true;await wait(220);
  const die=1+Math.floor(Math.random()*6),hit=die>=4;
- if(hit){const damage=guarded?0:1;if(damage)player.hp--;roll.textContent=guarded?`SKELETON ⚄ ${die} — your guard turns the blow`:`SKELETON ⚄ ${die} — HIT`;hitFlash=damage;render();await wait(90);hitFlash=0}
+ if(hit){const damage=guarded?0:1;if(damage)party[0].life--;roll.textContent=guarded?`SKELETON ⚄ ${die} — your guard turns the blow`:`SKELETON ⚄ ${die} — HIT`;hitFlash=damage;render();await wait(90);hitFlash=0}
  else{roll.textContent=`SKELETON ⚄ ${die} — MISS`}
  guarded=false;opening=true;
- if(player.hp<=0){player.hp=6;player.x=1;player.y=9;player.facing=0;warden.hp=3;hideEncounter();say("Darkness. You wake beside the sealed stair.")}
+ if(party[0].life<=0){party.forEach(h=>h.life=h.maxLife);player.x=1;player.y=9;player.facing=0;warden.hp=3;hideEncounter();say("Darkness. You wake beside the sealed stair.")}
  render();busy=false
 }
 async function combat(a:string){
