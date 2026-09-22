@@ -13,3 +13,8 @@
 .hero span{margin:.12rem 0;font-size:.42rem;color:#c99562}
 .hero b{font-size:.58rem;color:#d7e7cf}
 .in-encounter .party{display:grid}
+
+.party-actions{grid-template-columns:repeat(4,1fr);padding-bottom:0}
+.party-actions button{min-height:3.2rem;padding:.2rem;border:2px solid #d7e7cf;background:#130d17;font-size:.62rem;font-weight:900;letter-spacing:.05em}
+.party-actions button small{display:block;margin-top:.18rem;font-size:.38rem;color:#c99562;letter-spacing:0}
+.party-actions button:disabled{opacity:.28;filter:grayscale(1);transform:none;box-shadow:none}
