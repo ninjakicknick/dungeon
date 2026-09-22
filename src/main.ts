@@ -30,7 +30,7 @@ const party:Hero[]=[
  {id:"nix",name:"Nix",className:"rogue",level:1,life:4,maxLife:4,equipment:["light armor","light weapon","rope","lock-picks"],resources:{}},
  {id:"elara",name:"Elara",className:"wizard",level:1,life:3,maxLife:3,equipment:["light weapon","spellbook","writing implements"],resources:{spellSlots:3}}
 ];
-const player={x:1,y:9,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,guarded=false,opening=false;const warden={x:5,y:9,hp:3,awake:false,dead:false};
+const player={x:1,y:9,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false;const acted=new Set<number>();const warden={x:5,y:9,hp:3,awake:false,dead:false};
 const features=new Map<string,Feature>([["2,2","pillar"],["3,6","skulls"],["7,3","speaker"],["10,7","chest"]]);
 const secret={x:7,y:9,revealed:false};
 const DRAW=[{sx:0,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:240,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:320,sy:0,sw:160,sh:120,dx:0,dy:0},{sx:480,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:560,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:0,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:120,sw:160,sh:120,dx:0,dy:0},{sx:320,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:400,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:480,sy:120,sw:160,sh:120,dx:0,dy:0}];
@@ -52,35 +52,32 @@ function renderParty(){for(const hero of party){const el=document.querySelector<
 function render(){reveal();keyStatus.hidden=!hasSilverKey;renderParty();ctx.fillStyle=hitFlash?"#f6d6a8":"#000";ctx.fillRect(0,0,160,120);for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r);if(tileAt(x,y)!==1){drawSheet(atlas.ceiling,p);drawSheet(atlas.floor,p)}}for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r),t=tileAt(x,y);if(t===1)drawSheet(atlas.wall,p);else if(t===2)drawSheet(atlas.door,p);else if(t===3)drawSheet(atlas.locked,p);else{const ft=features.get(key(x,y));if(ft&&!used.has(key(x,y))){if(ft==="speaker")drawBillboard(atlas.speaker,f,r);else drawSheet(atlas[ft],p);}}}drawMonster();renderMap();updateInteract()}
 function say(t:string){message.textContent=t}
 function wait(ms:number){return new Promise<void>(r=>setTimeout(r,ms))}
+function d6(){let total=0,die=0;do{die=1+Math.floor(Math.random()*6);total+=die}while(die===6);return total}
+function heroAttackBonus(hero:Hero){if(hero.className==="warrior")return hero.level;if(hero.className==="cleric")return hero.level;/* undead */if(hero.className==="rogue")return hero.level-1;/* outnumbers this lone Minor-style foe; light weapon -1 */return -1}
+function heroButtons(){document.querySelectorAll<HTMLButtonElement>("[data-hero]").forEach((b,i)=>{b.disabled=acted.has(i)||party[i].life<=0})}
 function showEncounter(){
- inEncounter=true;document.body.classList.add("in-encounter");encounter.hidden=false;wardenHp.textContent="◆ ".repeat(warden.hp).trim();roll.textContent="REACH · its first attack comes before yours";say("The skeleton lowers its long blade.");void openingAttack()
+ inEncounter=true;acted.clear();document.body.classList.add("in-encounter");encounter.hidden=false;wardenHp.textContent="◆ ".repeat(warden.hp).trim();roll.textContent="Your turn · choose a hero";say("The skeleton raises its rusted blade.");heroButtons()
 }
-function hideEncounter(){inEncounter=false;document.body.classList.remove("in-encounter");encounter.hidden=true}
-async function openingAttack(){busy=true;await wait(180);roll.textContent="The skeleton lunges first.";await enemyReply();opening=false}
-async function enemyReply(){
- busy=true;await wait(220);
- const die=1+Math.floor(Math.random()*6),hit=die>=4;
- if(hit){const damage=guarded?0:1;if(damage)party[0].life--;roll.textContent=guarded?`SKELETON ⚄ ${die} — your guard turns the blow`:`SKELETON ⚄ ${die} — HIT`;hitFlash=damage;render();await wait(90);hitFlash=0}
- else{roll.textContent=`SKELETON ⚄ ${die} — MISS`}
- guarded=false;opening=true;
- if(party[0].life<=0){party.forEach(h=>h.life=h.maxLife);player.x=1;player.y=9;player.facing=0;warden.hp=3;hideEncounter();say("Darkness. You wake beside the sealed stair.")}
- render();busy=false
+function hideEncounter(){inEncounter=false;document.body.classList.remove("in-encounter");encounter.hidden=true;acted.clear()}
+async function foeTurn(){
+ busy=true;await wait(260);
+ const livingFront=[0,1].filter(i=>party[i].life>0);if(!livingFront.length){hideEncounter();say("The front rank falls. The party is driven back.");party.forEach(h=>h.life=h.maxLife);player.x=1;player.y=9;player.facing=0;warden.hp=3;render();busy=false;return}
+ const targetIndex=livingFront[Math.floor(Math.random()*livingFront.length)],hero=party[targetIndex],armor=hero.className==="warrior"||hero.className==="cleric"?2:hero.className==="rogue"?2:0;
+ const raw=d6(),total=raw+armor,defended=raw!==1&&total>3;
+ if(!defended)hero.life--;roll.textContent=`${hero.name.toUpperCase()} DEFENDS: ${raw} +${armor} = ${total} · ${defended?"SAFE":"HIT"}`;
+ hitFlash=defended?0:1;render();await wait(120);hitFlash=0;
+ if(hero.life<=0)roll.textContent+=` · ${hero.name.toUpperCase()} FALLS`;
+ acted.clear();heroButtons();render();busy=false
 }
-async function combat(a:string){
- if(busy||!inEncounter)return;
- if(a==="strike"){
-  const die=1+Math.floor(Math.random()*6),total=die+(opening?1:0);opening=false;
-  if(total>=4){warden.hp--;roll.textContent=`YOU ⚄ ${die}${total!==die?" +1":""} — HIT`}else roll.textContent=`YOU ⚄ ${die} — MISS`;
-  wardenHp.textContent="◆ ".repeat(Math.max(0,warden.hp)).trim();
-  if(warden.hp<=0){warden.dead=true;hideEncounter();say("The skeleton comes apart in a clatter of bone and rusted steel.");render();return}
-  await enemyReply();return
- }
- if(a==="guard"){guarded=true;roll.textContent="You brace for the warden's blow.";await enemyReply();return}
- if(a==="flee"){
-  const die=1+Math.floor(Math.random()*6);roll.textContent=`FLEE ⚄ ${die}`;
-  if(die>=4){hideEncounter();warden.awake=false;say("You break away. The skeleton remains beyond the sealed door.");render();return}
-  await enemyReply()
- }
+async function heroAttack(i:number){
+ if(busy||!inEncounter||acted.has(i)||party[i].life<=0)return;
+ const hero=party[i],raw=d6(),bonus=heroAttackBonus(hero),total=raw+bonus,foeLevel=3;
+ const damage=total>=foeLevel?Math.max(1,Math.floor(total/foeLevel)):0;
+ acted.add(i);if(damage)warden.hp=Math.max(0,warden.hp-damage);
+ roll.textContent=`${hero.name.toUpperCase()} ATTACKS: ${raw} ${bonus>=0?"+":""}${bonus} = ${total} · ${damage?damage+" DAMAGE":"MISS"}`;
+ wardenHp.textContent="◆ ".repeat(warden.hp).trim();heroButtons();
+ if(warden.hp<=0){warden.dead=true;hideEncounter();say("The skeleton collapses in a clatter of bone and rusted steel.");render();return}
+ if(acted.size>=party.filter(h=>h.life>0).length)await foeTurn()
 }
 function step(a:1|-1){const[x,y]=worldOffset(a,0),t=tileAt(x,y),f=featureAt(x,y);if(monsterAt(x,y)){showEncounter();render();return}if(t===2&&a===1){MAP[y][x]=0;say("The old door yields with a groan.");render();return}if(t===3){say("No handle. No lock. Just a slab fitted too neatly into the wall.");render();return}if(t===1){say("Cold stone blocks the way.");render();return}if(f){say(f==="pillar"?"The carved pillar blocks the passage.":f==="skulls"?"A deliberate pile of bones blocks your step.":f==="speaker"?"The stone figure bars the way.":"The battered chest blocks the way.");render();return}player.x=x;player.y=y;say("Your footsteps echo in the dark.");render()}
 function turn(a:1|-1){player.facing=((player.facing+a+4)%4)as Facing;say("You turn, listening.");render()}
@@ -93,6 +90,6 @@ function use(){const[tx,ty]=worldOffset(1,0);
  }if(tileAt(tx,ty)===3){if(!hasSilverKey){say("A narrow silver keyhole hides beneath the grime.");render();return}MAP[ty][tx]=0;hasSilverKey=false;warden.awake=true;warden.x=5;warden.y=9;warden.hp=3;say("The tarnished key turns once, then snaps in the lock. Beyond the opening, bone scrapes against stone.");render();return}if(player.x===8&&player.y===9&&!secret.revealed&&player.facing===3){secret.revealed=true;MAP[9][7]=0;say("One stone is warmer than the others. It sinks beneath your palm. Somewhere inside the wall: click.");render();return}const target=targetFeature(),f=target.feature;if(!f)return;const k=key(target.x,target.y);if(f==="pillar")say("Names have been cut into the pillar. Every one has been scratched out.");if(f==="skulls")say("Six skulls. Five face the corridor. One faces the wall.");if(f==="speaker")say("The stone mouth whispers: “The dead remember the way that stone forgets.”");if(f==="chest"){used.add(k);features.delete(k);hasSilverKey=true;say("Inside: a tarnished silver key and three old coins. You take them.");}render()}
 function act(a:string){if(busy||inEncounter)return;if(a==="forward")step(1);if(a==="back")step(-1);if(a==="left")turn(-1);if(a==="right")turn(1);if(a==="interact")use()}
 window.addEventListener("keydown",e=>{const actions:Record<string,string>={arrowup:"forward",w:"forward",arrowdown:"back",s:"back",arrowleft:"left",a:"left",arrowright:"right",d:"right",e:"interact"," ":"interact"};const action=actions[e.key.toLowerCase()];if(action){e.preventDefault();act(action)}});
-document.querySelectorAll<HTMLButtonElement>("[data-combat]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();void combat(b.dataset.combat!)}));
+document.querySelectorAll<HTMLButtonElement>("[data-hero]").forEach((b,i)=>b.addEventListener("pointerdown",e=>{e.preventDefault();void heroAttack(i)}));
 document.querySelectorAll<HTMLButtonElement>("[data-action]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();act(b.dataset.action!)}));
 Promise.all(Object.values(atlas).map(img=>img.decode().catch(()=>new Promise<void>(r=>img.addEventListener("load",()=>r(),{once:true}))))).then(()=>{say("The stair closes behind you. The air smells of wet stone.");render()});
