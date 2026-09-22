@@ -32,3 +32,10 @@
 .cleric-actions{grid-template-columns:repeat(3,1fr)}
 .heal-targets{grid-template-columns:repeat(5,1fr)}
 .heal-targets button{font-size:.46rem}
+
+.lock-actions{width:min(100%,28rem);border:3px solid #d7e7cf;background:#0d0910;padding:.5rem;text-align:center}
+.lock-actions[hidden]{display:none}
+.lock-actions strong,.lock-actions span{display:block}.lock-actions strong{font-size:.7rem;color:#f6d6a8;letter-spacing:.08em}.lock-actions span{min-height:1.7rem;padding:.3rem;font-size:.58rem;color:#c99562}
+.lock-actions div{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem}.lock-actions button{min-height:2.8rem;font-size:.55rem;font-weight:900}.lock-actions small{display:block;font-size:.4rem;color:#c99562}
+.lock-actions button:disabled{opacity:.28}
+.in-lock .controls,.in-lock .interact{display:none}
