@@ -3,7 +3,7 @@ type Facing=0|1|2|3; type Tile=0|1|2|3;
 type Feature="chest"|"pillar"|"skulls"|"speaker";
 const canvas=document.querySelector<HTMLCanvasElement>("#game")!,ctx=canvas.getContext("2d")!;
 const mapCanvas=document.querySelector<HTMLCanvasElement>("#map")!,mapCtx=mapCanvas.getContext("2d")!;
-const encounter=document.querySelector<HTMLElement>("#encounter")!,roll=document.querySelector<HTMLElement>("#roll")!,wardenHp=document.querySelector<HTMLElement>("#warden-hp")!,message=document.querySelector<HTMLElement>("#message")!,interact=document.querySelector<HTMLButtonElement>("#interact")!,keyStatus=document.querySelector<HTMLElement>("#key-status")!;
+const encounter=document.querySelector<HTMLElement>("#encounter")!,roll=document.querySelector<HTMLElement>("#roll")!,wardenHp=document.querySelector<HTMLElement>("#warden-hp")!,battleSpace=document.querySelector<HTMLElement>("#battle-space")!,message=document.querySelector<HTMLElement>("#message")!,interact=document.querySelector<HTMLButtonElement>("#interact")!,keyStatus=document.querySelector<HTMLElement>("#key-status")!;
 ctx.imageSmoothingEnabled=false;mapCtx.imageSmoothingEnabled=false;
 const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Image(),ceiling:new Image(),chest:new Image(),pillar:new Image(),skulls:new Image(),speaker:new Image(),skeleton:new Image(),minimap:new Image(),cursor:new Image()};
 for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wall.png",door:"dungeon_door.png",locked:"locked_door.png",ceiling:"dungeon_ceiling.png",chest:"chest_exterior.png",pillar:"pillar_interior.png",skulls:"skull_pile.png",speaker:"death_speaker.png",skeleton:"skeleton.png",minimap:"minimap.png",cursor:"minimap_cursor.png"})) atlas[k as keyof typeof atlas].src=new URL(`../assets/${file}`,import.meta.url).href;
@@ -30,6 +30,7 @@ const party:Hero[]=[
  {id:"nix",name:"Nix",className:"rogue",level:1,life:4,maxLife:4,equipment:["light armor","light weapon","rope","lock-picks"],resources:{}},
  {id:"elara",name:"Elara",className:"wizard",level:1,life:3,maxLife:3,equipment:["light weapon","spellbook","writing implements"],resources:{spellSlots:3}}
 ];
+const marchingOrder=[0,1,2,3];
 const player={x:1,y:9,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false;const acted=new Set<number>();const warden={x:5,y:9,hp:3,awake:false,dead:false};
 const features=new Map<string,Feature>([["2,2","pillar"],["3,6","skulls"],["7,3","speaker"],["10,7","chest"]]);
 const secret={x:7,y:9,revealed:false};
@@ -53,15 +54,17 @@ function render(){reveal();keyStatus.hidden=!hasSilverKey;renderParty();ctx.fill
 function say(t:string){message.textContent=t}
 function wait(ms:number){return new Promise<void>(r=>setTimeout(r,ms))}
 function d6(){let total=0,die=0;do{die=1+Math.floor(Math.random()*6);total+=die}while(die===6);return total}
+function isRoom(x=player.x,y=player.y){let exits=0;for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]])if(tileAt(x+dx,y+dy)===0)exits++;return exits>=3}
+function heroCanAct(i:number){if(isRoom())return true;const pos=marchingOrder.indexOf(i);return pos<2||party[i].className==="wizard"}
 function heroAttackBonus(hero:Hero){if(hero.className==="warrior")return hero.level;if(hero.className==="cleric")return hero.level;/* undead */if(hero.className==="rogue")return hero.level-1;/* outnumbers this lone Minor-style foe; light weapon -1 */return -1}
-function heroButtons(){document.querySelectorAll<HTMLButtonElement>("[data-hero]").forEach((b,i)=>{b.disabled=acted.has(i)||party[i].life<=0})}
+function heroButtons(){document.querySelectorAll<HTMLButtonElement>("[data-hero]").forEach((b,i)=>{b.disabled=acted.has(i)||party[i].life<=0||!heroCanAct(i);b.title=!heroCanAct(i)?"Rear rank: melee cannot reach in a corridor":""})}
 function showEncounter(){
- inEncounter=true;acted.clear();document.body.classList.add("in-encounter");encounter.hidden=false;wardenHp.textContent="◆ ".repeat(warden.hp).trim();roll.textContent="Your turn · choose a hero";say("The skeleton raises its rusted blade.");heroButtons()
+ inEncounter=true;acted.clear();document.body.classList.add("in-encounter");encounter.hidden=false;wardenHp.textContent="◆ ".repeat(warden.hp).trim();battleSpace.textContent=isRoom()?"ROOM":"CORRIDOR";roll.textContent=isRoom()?"Your turn · all heroes can fight":"Your turn · front rank fights; Elara can cast from the rear";say("The skeleton raises its rusted blade.");heroButtons()
 }
 function hideEncounter(){inEncounter=false;document.body.classList.remove("in-encounter");encounter.hidden=true;acted.clear()}
 async function foeTurn(){
  busy=true;await wait(260);
- const livingFront=[0,1].filter(i=>party[i].life>0);if(!livingFront.length){hideEncounter();say("The front rank falls. The party is driven back.");party.forEach(h=>h.life=h.maxLife);player.x=1;player.y=9;player.facing=0;warden.hp=3;render();busy=false;return}
+ const livingFront=marchingOrder.slice(0,2).filter(i=>party[i].life>0);if(!livingFront.length){hideEncounter();say("The front rank falls. The party is driven back.");party.forEach(h=>h.life=h.maxLife);player.x=1;player.y=9;player.facing=0;warden.hp=3;render();busy=false;return}
  const targetIndex=livingFront[Math.floor(Math.random()*livingFront.length)],hero=party[targetIndex],armor=hero.className==="warrior"||hero.className==="cleric"?2:hero.className==="rogue"?2:0;
  const raw=d6(),total=raw+armor,defended=raw!==1&&total>3;
  if(!defended)hero.life--;roll.textContent=`${hero.name.toUpperCase()} DEFENDS: ${raw} +${armor} = ${total} · ${defended?"SAFE":"HIT"}`;
@@ -70,14 +73,14 @@ async function foeTurn(){
  acted.clear();heroButtons();render();busy=false
 }
 async function heroAttack(i:number){
- if(busy||!inEncounter||acted.has(i)||party[i].life<=0)return;
+ if(busy||!inEncounter||acted.has(i)||party[i].life<=0||!heroCanAct(i))return;
  const hero=party[i],raw=d6(),bonus=heroAttackBonus(hero),total=raw+bonus,foeLevel=3;
  const damage=total>=foeLevel?Math.max(1,Math.floor(total/foeLevel)):0;
  acted.add(i);if(damage)warden.hp=Math.max(0,warden.hp-damage);
  roll.textContent=`${hero.name.toUpperCase()} ATTACKS: ${raw} ${bonus>=0?"+":""}${bonus} = ${total} · ${damage?damage+" DAMAGE":"MISS"}`;
  wardenHp.textContent="◆ ".repeat(warden.hp).trim();heroButtons();
  if(warden.hp<=0){warden.dead=true;hideEncounter();say("The skeleton collapses in a clatter of bone and rusted steel.");render();return}
- if(acted.size>=party.filter(h=>h.life>0).length)await foeTurn()
+ const eligible=party.map((h,i)=>h.life>0&&heroCanAct(i)?i:-1).filter(i=>i>=0);if(eligible.every(i=>acted.has(i)))await foeTurn()
 }
 function step(a:1|-1){const[x,y]=worldOffset(a,0),t=tileAt(x,y),f=featureAt(x,y);if(monsterAt(x,y)){showEncounter();render();return}if(t===2&&a===1){MAP[y][x]=0;say("The old door yields with a groan.");render();return}if(t===3){say("No handle. No lock. Just a slab fitted too neatly into the wall.");render();return}if(t===1){say("Cold stone blocks the way.");render();return}if(f){say(f==="pillar"?"The carved pillar blocks the passage.":f==="skulls"?"A deliberate pile of bones blocks your step.":f==="speaker"?"The stone figure bars the way.":"The battered chest blocks the way.");render();return}player.x=x;player.y=y;say("Your footsteps echo in the dark.");render()}
 function turn(a:1|-1){player.facing=((player.facing+a+4)%4)as Facing;say("You turn, listening.");render()}
