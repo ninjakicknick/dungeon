@@ -15,7 +15,7 @@ const regions:Region[]=[],regionAt=new Map<string,number>(),resolvedRegions=new 
 const corridorRolls=new Set([11,12,13,14,26,32,33,42,45,51,53,55,62,63,65]);
 function plainD6(){return 1+Math.floor(Math.random()*6)}
 function d66(){return plainD6()*10+plainD6()}
-function doorEdge(ax:number,ay:number,bx:number,by:number){return [key(ax,ay),key(bx,by)].sort().join("|")}
+function cellKey(x:number,y:number){return `${x},${y}`}\nfunction doorEdge(ax:number,ay:number,bx:number,by:number){return [cellKey(ax,ay),cellKey(bx,by)].sort().join("|")}
 function carveRegion(kind:"room"|"corridor",roll:number,cells:Array<[number,number]>){
  const id=regions.length,r={id,kind,roll,cells} as Region;regions.push(r);
  for(const[x,y]of cells)if(x>0&&x<W-1&&y>0&&y<H-1){MAP[y][x]=0;regionAt.set(`${x},${y}`,id)}
