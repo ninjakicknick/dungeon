@@ -57,7 +57,7 @@ const party:Hero[]=[
  {id:"elara",name:"Elara",className:"wizard",level:1,life:3,maxLife:3,equipment:["light weapon","spellbook","writing implements"],resources:{spellSlots:3,lightning:1,fireball:1,protection:1}}
 ];
 const marchingOrder=[0,1,2,3];
-const player={x:14,y:24,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>(),failedLocks=new Set<string>();let gold=0;const loot:string[]=[];let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,protectedHero:number|null=null;const acted=new Set<number>();const warden={x:-1,y:-1,hp:3,maxHp:3,level:3,awake:false,dead:false,name:"Skeletons",sprite:"skeleton" as "skeleton"|"zombie"|"shadow"|"imp",minor:true,undead:true};
+const player={x:14,y:24,facing:0 as Facing},visited=new Set<string>(),seenEdges=new Set<string>(),used=new Set<string>(),failedLocks=new Set<string>();let gold=0;const loot:string[]=[];let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,protectedHero:number|null=null;const acted=new Set<number>();const warden={x:-1,y:-1,hp:3,maxHp:3,level:3,awake:false,dead:false,name:"Skeletons",sprite:"skeleton" as "skeleton"|"zombie"|"shadow"|"imp",minor:true,undead:true};
 let monsterShake=0,moving=false;
 const features=new Map<string,Feature>();const secret={x:-1,y:-1,revealed:true};
 const DRAW=[{sx:0,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:240,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:320,sy:0,sw:160,sh:120,dx:0,dy:0},{sx:480,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:560,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:0,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:120,sw:160,sh:120,dx:0,dy:0},{sx:320,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:400,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:480,sy:120,sw:160,sh:120,dx:0,dy:0}];
@@ -67,8 +67,28 @@ const key=(x:number,y:number)=>`${x},${y}`,tileAt=(x:number,y:number):Tile=>MAP[
 function worldOffset(f:number,r:number):[number,number]{const d=dirs[player.facing];return[player.x+d.fx*f+d.rx*r,player.y+d.fy*f+d.ry*r]}
 function drawSheet(img:HTMLImageElement,p:number){const a=DRAW[p];ctx.drawImage(img,a.sx,a.sy,a.sw,a.sh,a.dx,a.dy,a.sw,a.sh)}
 function drawBillboard(img:HTMLImageElement,f:number,r:number,src?:{x:number,y:number,w:number,h:number}){if(f<1||f>2||Math.abs(r)>1)return;const w=f===1?90:42,h=f===1?88:41,x=80+r*(f===1?42:25)-w/2,floorY=f===1?112:88,y=floorY-h;if(src)ctx.drawImage(img,src.x,src.y,src.w,src.h,Math.round(x),Math.round(y),w,h);else ctx.drawImage(img,Math.round(x),Math.round(y),w,h)}
-function reveal(){visited.add(key(player.x,player.y));for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]])visited.add(key(player.x+dx,player.y+dy))}
-function renderMap(){const s=5,vw=Math.floor(mapCanvas.width/s),vh=Math.floor(mapCanvas.height/s),ox=Math.max(0,Math.min(W-vw,player.x-Math.floor(vw/2))),oy=Math.max(0,Math.min(H-vh,player.y-Math.floor(vh/2)));mapCtx.fillStyle="#08060a";mapCtx.fillRect(0,0,mapCanvas.width,mapCanvas.height);for(let y=oy;y<Math.min(H,oy+vh);y++)for(let x=ox;x<Math.min(W,ox+vw);x++){if(!visited.has(key(x,y)))continue;const t=tileAt(x,y);mapCtx.fillStyle=t===1?"#251b17":t===2?"#8f563b":t===3?"#5e342c":"#b86f43";mapCtx.fillRect((x-ox)*s,(y-oy)*s,s-1,s-1)}mapCtx.fillStyle="#d7e7cf";mapCtx.fillRect((player.x-ox)*s+1,(player.y-oy)*s+1,3,3)}
+function reveal(){
+ visited.add(key(player.x,player.y));
+ for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]])seenEdges.add(doorEdge(player.x,player.y,player.x+dx,player.y+dy))
+}
+function renderMap(){
+ const s=5,vw=Math.floor(mapCanvas.width/s),vh=Math.floor(mapCanvas.height/s),ox=Math.max(0,Math.min(W-vw,player.x-Math.floor(vw/2))),oy=Math.max(0,Math.min(H-vh,player.y-Math.floor(vh/2)));
+ mapCtx.fillStyle="#08060a";mapCtx.fillRect(0,0,mapCanvas.width,mapCanvas.height);
+ // Walked floor is certain. Adjacent floor inside a discovered region is only a lead until the party actually reaches it.
+ const leads=new Set<string>();
+ for(const v of visited){const [x,y]=v.split(",").map(Number);for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]]){const nx=x+dx,ny=y+dy;if(tileAt(nx,ny)===0&&!visited.has(key(nx,ny))&&seenEdges.has(doorEdge(x,y,nx,ny)))leads.add(key(nx,ny))}}
+ for(let y=oy;y<Math.min(H,oy+vh);y++)for(let x=ox;x<Math.min(W,ox+vw);x++){
+  const k=key(x,y),walked=visited.has(k),lead=leads.has(k);if(!walked&&!lead)continue;
+  mapCtx.fillStyle=walked?"#b86f43":"#50382f";mapCtx.fillRect((x-ox)*s,(y-oy)*s,s-1,s-1);
+ }
+ // Draw only boundaries the party has personally observed. Unseen edges stay open/ambiguous instead of lying about a wall.
+ mapCtx.strokeStyle="#d9a066";mapCtx.lineWidth=1;
+ for(const edge of seenEdges){const [a,b]=edge.split("|"),[ax,ay]=a.split(",").map(Number),[bx,by]=b.split(",").map(Number);if(ax<ox||ax>=ox+vw||ay<oy||ay>=oy+vh)continue;const wall=tileAt(bx,by)===1||tileAt(ax,ay)===1;if(!wall)continue;const x=(ax-ox)*s,y=(ay-oy)*s;if(bx>ax){mapCtx.beginPath();mapCtx.moveTo(x+s-1,y);mapCtx.lineTo(x+s-1,y+s-1);mapCtx.stroke()}else if(bx<ax){mapCtx.beginPath();mapCtx.moveTo(x,y);mapCtx.lineTo(x,y+s-1);mapCtx.stroke()}else if(by>ay){mapCtx.beginPath();mapCtx.moveTo(x,y+s-1);mapCtx.lineTo(x+s-1,y+s-1);mapCtx.stroke()}else{mapCtx.beginPath();mapCtx.moveTo(x,y);mapCtx.lineTo(x+s-1,y);mapCtx.stroke()}}
+ // Threshold doors get a bright notch across the edge once either side has been explored.
+ mapCtx.strokeStyle="#d7e7cf";
+ for(const edge of sectionDoors){const [a,b]=edge.split("|"),[ax,ay]=a.split(",").map(Number),[bx,by]=b.split(",").map(Number);if(!visited.has(a)&&!visited.has(b))continue;const mx=((ax+bx)/2-ox)*s+2,my=((ay+by)/2-oy)*s+2;mapCtx.beginPath();if(ax!==bx){mapCtx.moveTo(mx,my-2);mapCtx.lineTo(mx,my+2)}else{mapCtx.moveTo(mx-2,my);mapCtx.lineTo(mx+2,my)}mapCtx.stroke()}
+ mapCtx.fillStyle="#d7e7cf";mapCtx.fillRect((player.x-ox)*s+1,(player.y-oy)*s+1,3,3)
+}
 function featureAt(x:number,y:number){return features.get(key(x,y))}
 function targetFeature(){const[x,y]=worldOffset(1,0);return {x,y,feature:featureAt(x,y)}}
 function monsterAt(x:number,y:number){return warden.awake&&!warden.dead&&warden.x===x&&warden.y===y}
