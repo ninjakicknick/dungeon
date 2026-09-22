@@ -44,7 +44,27 @@ function generateDungeon(){
   const fresh=cells.filter(([cx,cy])=>MAP[cy][cx]===1);if(fresh.length<(kind==="room"?9:2))continue;
   sectionDoors.add(doorEdge(ax,ay,fresh[0][0],fresh[0][1]));carveRegion(kind,roll,fresh);
   const candidates=fresh.filter(([cx,cy])=>Math.abs(cx-ax)+Math.abs(cy-ay)>=2);if(!candidates.length)continue;
-  const [ex,ey]=candidates[candidates.length-1];anchors.push([ex,ey,dx,dy],[ex,ey,-dy,dx],[ex,ey,dy,-dx])
+  // Seed exits from actual outer edges instead of one arbitrary cell. Rooms usually offer 2–3 believable ways onward.
+  const edgeCandidates=(vx:number,vy:number)=>candidates.filter(([cx,cy])=>MAP[cy+vy]?.[cx+vx]===1);
+  const exits:Array<[number,number,number,number]>=[];
+  const addExit=(vx:number,vy:number)=>{const options=edgeCandidates(vx,vy);if(!options.length)return;const [ex,ey]=options[Math.floor(Math.random()*options.length)];if(!exits.some(([qx,qy])=>qx===ex&&qy===ey))exits.push([ex,ey,vx,vy])};
+  addExit(dx,dy);
+  if(kind==="room"){addExit(-dy,dx);addExit(dy,-dx);if(exits.length<2)addExit(dx,dy)}
+  else{if(Math.random()<.65)addExit(Math.random()<.5?-dy:dy,Math.random()<.5?dx:-dx)}
+  for(const exit of exits)anchors.push(exit)
+ }
+ // If generation petered out early, reopen a few unused room edges and give the dungeon another chance to branch.
+ if(regions.length<8){
+  for(const r of regions.filter(r=>r.kind==="room").slice().reverse()){
+   for(const [x,y] of r.cells){for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]])if(MAP[y+dy]?.[x+dx]===1){anchors.push([x,y,dx,dy]);break}if(anchors.length>=4)break}
+   if(anchors.length>=4)break
+  }
+  for(let n=regions.length;n<10&&anchors.length;n++){
+   const [ax,ay,dx,dy]=anchors.shift()!,roll=d66(),kind=corridorRolls.has(roll)?"corridor":"room",cells:Array<[number,number]>=[];let x=ax,y=ay;
+   if(kind==="corridor"){for(let i=0;i<3;i++){x+=dx;y+=dy;if(x<=1||x>=W-2||y<=1||y>=H-2)break;cells.push([x,y])}}
+   else{x+=dx;y+=dy;const px=-dy,py=dx,cx=x+dx,cy=y+dy;cells.push([x,y]);for(let depth=0;depth<3;depth++)for(let side=-2;side<=2;side++){const rx=cx+dx*depth+px*side,ry=cy+dy*depth+py*side;if(rx>1&&rx<W-2&&ry>1&&ry<H-2)cells.push([rx,ry])}}
+   const fresh=cells.filter(([cx,cy])=>MAP[cy]?.[cx]===1);if(fresh.length<(kind==="room"?9:2))continue;sectionDoors.add(doorEdge(ax,ay,fresh[0][0],fresh[0][1]));carveRegion(kind,roll,fresh)
+  }
  }
 }
 generateDungeon();
