@@ -23,3 +23,8 @@
 .hero{position:relative}
 .hero i{position:absolute;left:.18rem;top:.12rem;font-style:normal;font-size:.42rem;color:#6b3e2e}
 .hero:nth-child(-n+2){border-color:#d7e7cf}
+
+.wizard-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;margin-top:.4rem}
+.wizard-actions[hidden],.party-actions[hidden]{display:none}
+.wizard-actions button{min-height:2.8rem;padding:.18rem;font-size:.52rem;font-weight:900;letter-spacing:.04em}
+.wizard-actions small{display:block;margin-top:.12rem;color:#c99562}
