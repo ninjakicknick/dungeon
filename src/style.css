@@ -28,3 +28,7 @@
 .wizard-actions[hidden],.party-actions[hidden]{display:none}
 .wizard-actions button{min-height:2.8rem;padding:.18rem;font-size:.52rem;font-weight:900;letter-spacing:.04em}
 .wizard-actions small{display:block;margin-top:.12rem;color:#c99562}
+
+.cleric-actions{grid-template-columns:repeat(3,1fr)}
+.heal-targets{grid-template-columns:repeat(5,1fr)}
+.heal-targets button{font-size:.46rem}
