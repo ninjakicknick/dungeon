@@ -9,7 +9,7 @@ const atlas={floor:new Image(),wall:new Image(),door:new Image(),locked:new Imag
 for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wall.png",door:"dungeon_door.png",locked:"locked_door.png",ceiling:"dungeon_ceiling.png",chest:"chest_exterior.png",pillar:"pillar_interior.png",skulls:"skull_pile.png",speaker:"death_speaker.png",skeleton:"skeleton.png",minimap:"minimap.png",cursor:"minimap_cursor.png"})) atlas[k as keyof typeof atlas].src=new URL(`../assets/${file}`,import.meta.url).href;
 
 // 0 floor, 1 wall, 2 door, 3 locked door. The floor is rolled fresh each expedition.
-const W=18,H=16,MAP:Tile[][]=Array.from({length:H},()=>Array<Tile>(W).fill(1));
+const W=30,H=26,MAP:Tile[][]=Array.from({length:H},()=>Array<Tile>(W).fill(1));
 type Region={id:number,kind:"room"|"corridor",roll:number,cells:Array<[number,number]>,content?:string};
 const regions:Region[]=[],regionAt=new Map<string,number>(),resolvedRegions=new Set<number>(),sectionDoors=new Set<string>();
 const corridorRolls=new Set([11,12,13,14,26,32,33,42,45,51,53,55,62,63,65]);
@@ -22,16 +22,14 @@ function carveRegion(kind:"room"|"corridor",roll:number,cells:Array<[number,numb
  for(const[x,y]of cells)if(x>0&&x<W-1&&y>0&&y<H-1){MAP[y][x]=0;regionAt.set(`${x},${y}`,id)}
 }
 function generateDungeon(){
- // First room: no content roll, as in 4AD.
- carveRegion("room",0,[[4,8],[5,8],[6,8],[4,9],[5,9],[6,9]]);
- const anchors:Array<[number,number,number,number]>=[[5,8,0,-1],[4,8,-1,0],[6,8,1,0]];
+ const start:Array<[number,number]>=[];for(let y=20;y<=24;y++)for(let x=11;x<=18;x++)start.push([x,y]);carveRegion("room",0,start);
+ const anchors:Array<[number,number,number,number]>=[[14,20,0,-1],[11,22,-1,0],[18,22,1,0]];
  for(let n=0;n<10&&anchors.length;n++){
-  const ai=Math.floor(Math.random()*anchors.length),[ax,ay,dx,dy]=anchors.splice(ai,1)[0],roll=d66(),kind=corridorRolls.has(roll)?"corridor":"room";
-  const len=kind==="corridor"?2+Math.floor(Math.random()*2):1,cells:Array<[number,number]>=[];
-  let x=ax,y=ay;for(let i=0;i<len;i++){x+=dx;y+=dy;if(x<=0||x>=W-1||y<=0||y>=H-1)break;cells.push([x,y])}
-  if(kind==="room"&&cells.length){const [cx,cy]=cells[cells.length-1],px=-dy,py=dx;for(let depth=0;depth<3;depth++)for(let side=-2;side<=2;side++){const rx=cx+px*side+dx*depth,ry=cy+py*side+dy*depth;if(rx>0&&rx<W-1&&ry>0&&ry<H-1)cells.push([rx,ry])}}
-  const fresh=cells.filter(([cx,cy])=>MAP[cy][cx]===1);if(!fresh.length)continue;sectionDoors.add(doorEdge(ax,ay,fresh[0][0],fresh[0][1]));carveRegion(kind,roll,fresh);
-  const [ex,ey]=fresh[fresh.length-1];anchors.push([ex,ey,dx,dy],[ex,ey,-dy,dx],[ex,ey,dy,-dx])
+  const ai=Math.floor(Math.random()*anchors.length),[ax,ay,dx,dy]=anchors.splice(ai,1)[0],roll=d66(),kind=corridorRolls.has(roll)?"corridor":"room",cells:Array<[number,number]>=[];let x=ax,y=ay;
+  if(kind==="corridor"){for(let i=0;i<4;i++){x+=dx;y+=dy;if(x<=1||x>=W-2||y<=1||y>=H-2)break;cells.push([x,y])}}
+  else{x+=dx;y+=dy;if(x<=1||x>=W-2||y<=1||y>=H-2)continue;cells.push([x,y]);const px=-dy,py=dx,cx=x+dx*3,cy=y+dy*3;for(let depth=-2;depth<=3;depth++)for(let side=-3;side<=4;side++){const rx=cx+dx*depth+px*side,ry=cy+dy*depth+py*side;if(rx>1&&rx<W-2&&ry>1&&ry<H-2)cells.push([rx,ry])}}
+  const fresh=cells.filter(([cx,cy])=>MAP[cy][cx]===1);if(fresh.length<(kind==="room"?20:2))continue;sectionDoors.add(doorEdge(ax,ay,fresh[0][0],fresh[0][1]));carveRegion(kind,roll,fresh);
+  const candidates=fresh.filter(([cx,cy])=>Math.abs(cx-ax)+Math.abs(cy-ay)>=3);if(!candidates.length)continue;const [ex,ey]=candidates[candidates.length-1];anchors.push([ex,ey,dx,dy],[ex,ey,-dy,dx],[ex,ey,dy,-dx])
  }
 }
 generateDungeon();
@@ -44,7 +42,7 @@ const party:Hero[]=[
  {id:"elara",name:"Elara",className:"wizard",level:1,life:3,maxLife:3,equipment:["light weapon","spellbook","writing implements"],resources:{spellSlots:3,lightning:1,fireball:1,protection:1}}
 ];
 const marchingOrder=[0,1,2,3];
-const player={x:8,y:14,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>(),failedLocks=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,protectedHero:number|null=null;const acted=new Set<number>();const warden={x:-1,y:-1,hp:3,awake:false,dead:false};
+const player={x:14,y:24,facing:0 as Facing},visited=new Set<string>(),used=new Set<string>(),failedLocks=new Set<string>();let hasSilverKey=false,busy=false,hitFlash=0,inEncounter=false,protectedHero:number|null=null;const acted=new Set<number>();const warden={x:-1,y:-1,hp:3,awake:false,dead:false};
 const features=new Map<string,Feature>();const secret={x:-1,y:-1,revealed:true};
 const DRAW=[{sx:0,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:240,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:320,sy:0,sw:160,sh:120,dx:0,dy:0},{sx:480,sy:0,sw:80,sh:120,dx:0,dy:0},{sx:560,sy:0,sw:80,sh:120,dx:80,dy:0},{sx:0,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:80,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:160,sy:120,sw:160,sh:120,dx:0,dy:0},{sx:320,sy:120,sw:80,sh:120,dx:0,dy:0},{sx:400,sy:120,sw:80,sh:120,dx:80,dy:0},{sx:480,sy:120,sw:160,sh:120,dx:0,dy:0}];
 const VIEW:Array<[number,number,number]>=[[2,-2,0],[2,2,1],[2,-1,2],[2,1,3],[2,0,4],[1,-2,5],[1,2,6],[1,-1,7],[1,1,8],[1,0,9],[0,-1,10],[0,1,11],[0,0,12]];
@@ -143,8 +141,9 @@ function contentFor(total:number,kind:"room"|"corridor"){
 function resolveRegion(x:number,y:number){
  const id=regionAt.get(key(x,y));if(id===undefined||id===0||resolvedRegions.has(id))return "";
  resolvedRegions.add(id);const r=regions[id],a=plainD6(),b=plainD6(),total=a+b,content=contentFor(total,r.kind);r.content=content;
- if(content==="TREASURE"||content==="TRAPPED TREASURE"){features.set(key(x,y),"chest")}
- else if(content==="SPECIAL FEATURE"){features.set(key(x,y),["pillar","skulls","speaker"][Math.floor(Math.random()*3)] as Feature)}
+ const safeCells=r.cells.filter(([cx,cy])=>Math.abs(cx-x)+Math.abs(cy-y)>=4&&regionAt.get(key(cx,cy))===id),spot=safeCells[Math.floor(Math.random()*safeCells.length)];
+ if(spot&&(content==="TREASURE"||content==="TRAPPED TREASURE")){features.set(key(spot[0],spot[1]),"chest")}
+ else if(spot&&content==="SPECIAL FEATURE"){features.set(key(spot[0],spot[1]),["pillar","skulls","speaker"][Math.floor(Math.random()*3)] as Feature)}
  else if((content==="MINIONS"||content==="BOSS"||content==="WEIRD MONSTER")&&!warden.awake&&!warden.dead){warden.awake=true;warden.x=x;warden.y=y;warden.hp=content==="BOSS"?5:3}
  return `d66 ${r.roll} · ${r.kind.toUpperCase()} · CONTENT ${a}+${b}=${total}: ${content}`
 }
