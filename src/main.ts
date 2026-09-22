@@ -11,10 +11,11 @@ for(const [k,file] of Object.entries({floor:"dungeon_floor.png",wall:"dungeon_wa
 // 0 floor, 1 wall, 2 door, 3 locked door. The floor is rolled fresh each expedition.
 const W=12,H=11,MAP:Tile[][]=Array.from({length:H},()=>Array<Tile>(W).fill(1));
 type Region={id:number,kind:"room"|"corridor",roll:number,cells:Array<[number,number]>,content?:string};
-const regions:Region[]=[],regionAt=new Map<string,number>(),resolvedRegions=new Set<number>();
+const regions:Region[]=[],regionAt=new Map<string,number>(),resolvedRegions=new Set<number>(),sectionDoors=new Set<string>();
 const corridorRolls=new Set([11,12,13,14,26,32,33,42,45,51,53,55,62,63,65]);
 function plainD6(){return 1+Math.floor(Math.random()*6)}
 function d66(){return plainD6()*10+plainD6()}
+function doorEdge(ax:number,ay:number,bx:number,by:number){return [key(ax,ay),key(bx,by)].sort().join("|")}
 function carveRegion(kind:"room"|"corridor",roll:number,cells:Array<[number,number]>){
  const id=regions.length,r={id,kind,roll,cells} as Region;regions.push(r);
  for(const[x,y]of cells)if(x>0&&x<W-1&&y>0&&y<H-1){MAP[y][x]=0;regionAt.set(`${x},${y}`,id)}
@@ -28,7 +29,7 @@ function generateDungeon(){
   const len=kind==="corridor"?2+Math.floor(Math.random()*2):1,cells:Array<[number,number]>=[];
   let x=ax,y=ay;for(let i=0;i<len;i++){x+=dx;y+=dy;if(x<=0||x>=W-1||y<=0||y>=H-1)break;cells.push([x,y])}
   if(kind==="room"&&cells.length){const [cx,cy]=cells[cells.length-1],px=-dy,py=dx;for(const side of [-1,1])for(let depth=0;depth<2;depth++){const rx=cx+px*side+dx*depth,ry=cy+py*side+dy*depth;if(rx>0&&rx<W-1&&ry>0&&ry<H-1)cells.push([rx,ry])}}
-  const fresh=cells.filter(([cx,cy])=>MAP[cy][cx]===1);if(!fresh.length)continue;carveRegion(kind,roll,fresh);
+  const fresh=cells.filter(([cx,cy])=>MAP[cy][cx]===1);if(!fresh.length)continue;sectionDoors.add(doorEdge(ax,ay,fresh[0][0],fresh[0][1]));carveRegion(kind,roll,fresh);
   const [ex,ey]=fresh[fresh.length-1];anchors.push([ex,ey,dx,dy],[ex,ey,-dy,dx],[ex,ey,dy,-dx])
  }
 }
@@ -60,7 +61,7 @@ function targetMonster(){const[x,y]=worldOffset(1,0);return monsterAt(x,y)}
 function drawMonster(){if(!warden.awake||warden.dead)return;const d=dirs[player.facing],dx=warden.x-player.x,dy=warden.y-player.y,f=dx*d.fx+dy*d.fy,r=dx*d.rx+dy*d.ry;if(f<1||f>2||Math.abs(r)>1)return;const blocked=f===2&&tileAt(...worldOffset(1,r))!==0;if(blocked)return;drawBillboard(atlas.skeleton,f,r,{x:52,y:34,w:82,h:80})}
 function updateInteract(){const target=targetFeature(),[tx,ty]=worldOffset(1,0),atMonster=targetMonster(),atLocked=tileAt(tx,ty)===3,atSecret=player.x===8&&player.y===9&&!secret.revealed&&player.facing===3,available=!!target.feature||atSecret||atLocked||atMonster;interact.hidden=false;interact.style.visibility=available?"visible":"hidden";interact.style.pointerEvents=available?"auto":"none";interact.textContent=atMonster?"ATTACK":target.feature==="chest"?"OPEN":target.feature?"EXAMINE":atLocked?"LOCK":atSecret?"EXAMINE":""}
 function renderParty(){elaraSpells.textContent=String(party[3].resources.spellSlots);maraHeals.textContent=String(party[1].resources.healing);for(const hero of party){const el=document.querySelector<HTMLElement>(`#life-${hero.id}`);if(el)el.textContent=`♥ ${hero.life}/${hero.maxLife}`}}
-function render(){reveal();keyStatus.hidden=!hasSilverKey;renderParty();ctx.fillStyle=hitFlash?"#f6d6a8":"#000";ctx.fillRect(0,0,160,120);for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r);if(tileAt(x,y)!==1){drawSheet(atlas.ceiling,p);drawSheet(atlas.floor,p)}}for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r),t=tileAt(x,y);if(t===1)drawSheet(atlas.wall,p);else if(t===2)drawSheet(atlas.door,p);else if(t===3)drawSheet(atlas.locked,p);else{const ft=features.get(key(x,y));if(ft&&!used.has(key(x,y))){if(ft==="speaker")drawBillboard(atlas.speaker,f,r);else drawSheet(atlas[ft],p);}}}drawMonster();renderMap();updateInteract()}
+function render(){reveal();keyStatus.hidden=!hasSilverKey;renderParty();ctx.fillStyle=hitFlash?"#f6d6a8":"#000";ctx.fillRect(0,0,160,120);for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r);if(tileAt(x,y)!==1){drawSheet(atlas.ceiling,p);drawSheet(atlas.floor,p)}}for(const[f,r,p]of VIEW){const[x,y]=worldOffset(f,r),t=tileAt(x,y),[px,py]=worldOffset(f-1,r),door=sectionDoors.has(doorEdge(px,py,x,y));if(door)drawSheet(atlas.door,p);else if(t===1)drawSheet(atlas.wall,p);else if(t===2)drawSheet(atlas.door,p);else if(t===3)drawSheet(atlas.locked,p);else{const ft=features.get(key(x,y));if(ft&&!used.has(key(x,y))){if(ft==="speaker")drawBillboard(atlas.speaker,f,r);else drawSheet(atlas[ft],p);}}}drawMonster();renderMap();updateInteract()}
 function say(t:string){message.textContent=t}
 function wait(ms:number){return new Promise<void>(r=>setTimeout(r,ms))}
 function d6(){let total=0,die=0;do{die=1+Math.floor(Math.random()*6);total+=die}while(die===6);return total}
@@ -146,7 +147,7 @@ function resolveRegion(x:number,y:number){
  else if((content==="MINIONS"||content==="BOSS"||content==="WEIRD MONSTER")&&!warden.awake&&!warden.dead){warden.awake=true;warden.x=x;warden.y=y;warden.hp=content==="BOSS"?5:3}
  return `d66 ${r.roll} · ${r.kind.toUpperCase()} · CONTENT ${a}+${b}=${total}: ${content}`
 }
-function step(a:1|-1){const[x,y]=worldOffset(a,0),t=tileAt(x,y),f=featureAt(x,y);if(monsterAt(x,y)){showEncounter();render();return}if(t===2&&a===1){MAP[y][x]=0;say("The old door yields with a groan.");render();return}if(t===3){showLock();return}if(t===1){say("Cold stone blocks the way.");render();return}if(f){say(f==="pillar"?"The carved pillar blocks the passage.":f==="skulls"?"A deliberate pile of bones blocks your step.":f==="speaker"?"The stone figure bars the way.":"The battered chest blocks the way.");render();return}player.x=x;player.y=y;const discovery=resolveRegion(x,y);say(discovery||"Your footsteps echo in the dark.");render()}
+function step(a:1|-1){const[x,y]=worldOffset(a,0),t=tileAt(x,y),f=featureAt(x,y),edge=doorEdge(player.x,player.y,x,y);if(a===1&&sectionDoors.has(edge)){sectionDoors.delete(edge);say("The old door yields with a groan.");render();return}if(monsterAt(x,y)){showEncounter();render();return}if(t===2&&a===1){MAP[y][x]=0;say("The old door yields with a groan.");render();return}if(t===3){showLock();return}if(t===1){say("Cold stone blocks the way.");render();return}if(f){say(f==="pillar"?"The carved pillar blocks the passage.":f==="skulls"?"A deliberate pile of bones blocks your step.":f==="speaker"?"The stone figure bars the way.":"The battered chest blocks the way.");render();return}player.x=x;player.y=y;const discovery=resolveRegion(x,y);say(discovery||"Your footsteps echo in the dark.");render()}
 function turn(a:1|-1){player.facing=((player.facing+a+4)%4)as Facing;say("You turn, listening.");render()}
 function showLock(){const[tx,ty]=worldOffset(1,0);const k=key(tx,ty);lockActions.hidden=false;document.body.classList.add("in-lock");lockRoll.textContent=failedLocks.has(k)?"The picks have slipped. This lock has beaten Nix.":"Nix studies the mechanism.";const pick=document.querySelector<HTMLButtonElement>('[data-lock="pick"]')!,useKey=document.querySelector<HTMLButtonElement>('[data-lock="key"]')!;pick.disabled=failedLocks.has(k);useKey.disabled=!hasSilverKey}
 function hideLock(){lockActions.hidden=true;document.body.classList.remove("in-lock")}
