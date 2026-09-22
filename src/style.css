@@ -5,3 +5,11 @@
 .interact{min-height:2.6rem;border-width:3px;font-weight:900}
 .encounter{border-width:3px;padding:.55rem}.encounter-head{font-weight:900;font-size:.8rem}.roll{font-weight:700}
 .encounter-actions{gap:.5rem}.encounter-actions .combat-icon{position:relative;height:4.4rem;min-height:4.4rem;padding:0;background-color:#0d0910;background-image:none;border:0;box-shadow:none;color:#d7e7cf}.combat-icon::before{content:"";position:absolute;width:3.65rem;height:3.65rem;left:50%;top:50%;transform:translate(-50%,-54%);background-image:url("../assets/action_buttons.png");background-repeat:no-repeat;background-size:800% 100%;image-rendering:pixelated}.combat-icon.strike::before{background-position:0 0}.combat-icon.flee::before{background-position:14.2857% 0}.combat-icon.guard::before{background-image:none;background:#130d17;border:3px solid #d7e7cf;box-shadow:2px 2px 0 #28172d}.combat-icon span{position:absolute;left:0;right:0;bottom:-1.15rem;font-size:.55rem;font-weight:900;letter-spacing:.08em;text-shadow:1px 1px #000}.encounter-actions{padding-bottom:1.1rem}
+
+.party{width:min(100%,28rem);display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem}
+.hero{min-width:0;padding:.32rem .28rem;background:#0d0910;border:2px solid #6b3e2e;box-shadow:1px 1px 0 #28172d;text-align:center}
+.hero strong,.hero span,.hero b{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.hero strong{font-size:.66rem;letter-spacing:.08em;color:#f6d6a8}
+.hero span{margin:.12rem 0;font-size:.42rem;color:#c99562}
+.hero b{font-size:.58rem;color:#d7e7cf}
+.in-encounter .party{display:grid}
