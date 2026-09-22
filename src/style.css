@@ -18,3 +18,8 @@
 .party-actions button{min-height:3.2rem;padding:.2rem;border:2px solid #d7e7cf;background:#130d17;font-size:.62rem;font-weight:900;letter-spacing:.05em}
 .party-actions button small{display:block;margin-top:.18rem;font-size:.38rem;color:#c99562;letter-spacing:0}
 .party-actions button:disabled{opacity:.28;filter:grayscale(1);transform:none;box-shadow:none}
+
+.encounter-head em{font-style:normal;font-size:.52rem;color:#c99562;letter-spacing:.12em}
+.hero{position:relative}
+.hero i{position:absolute;left:.18rem;top:.12rem;font-style:normal;font-size:.42rem;color:#6b3e2e}
+.hero:nth-child(-n+2){border-color:#d7e7cf}
