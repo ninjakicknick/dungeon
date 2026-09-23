@@ -1,9 +1,14 @@
 :root{font-family:ui-monospace,"Courier New",monospace;color:#d7c3a0;background:#070605;font-synthesis:none}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#070605}body{min-height:100svh;display:grid;place-items:center;overflow:hidden}#app{width:min(100vw,calc(100svh * 16 / 10));display:grid;gap:.55rem;padding:.65rem}.scene-head{display:flex;justify-content:space-between;color:#a9875f;font-size:.62rem;letter-spacing:.14em}.scene{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#000;border:1px solid #5b4937;box-shadow:0 0 0 1px #17110c}.room{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}.vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 47%,transparent 45%,rgba(0,0,0,.22) 75%,rgba(0,0,0,.58) 110%)}.exit{position:absolute;padding:0;border:0;background:transparent;cursor:pointer;z-index:2;overflow:hidden}.exit .door-sprite{position:absolute;display:block;background-image:url("/assets/room-overlays/doors.png");background-repeat:no-repeat;transition:filter .16s ease,transform .16s ease;filter:drop-shadow(0 5px 6px rgba(0,0,0,.75))}.exit em{position:absolute;left:50%;bottom:.15rem;transform:translateX(-50%);z-index:3;font:700 .5rem ui-monospace,"Courier New",monospace;letter-spacing:.14em;color:#ead5ae;background:#080604cc;padding:.18rem .3rem;opacity:0;transition:opacity .15s}.exit:hover em,.exit:focus-visible em{opacity:1}.exit:hover .door-sprite,.exit:focus-visible .door-sprite{filter:brightness(1.16) drop-shadow(0 5px 6px rgba(0,0,0,.75))}
 
-/* The generated door sheet is not a uniform sprite grid. Each exit is a clipping window,
-   and the full sheet is independently scaled/offset inside it so only one clean asset shows. */
-.rear{width:14%;height:37%;left:43%;top:27%}.rear .door-sprite{width:715%;height:270%;left:0%;top:0%;background-size:100% 100%;background-position:0 0}
-.left{width:16%;height:43%;left:8%;top:26%;transform:perspective(500px) rotateY(10deg)}.left .door-sprite{width:625%;height:233%;left:-100%;top:0%;background-size:100% 100%;background-position:0 0}
-.right{width:16%;height:43%;right:8%;top:26%;transform:perspective(500px) rotateY(-10deg)}.right .door-sprite{width:625%;height:233%;left:-200%;top:0%;background-size:100% 100%;background-position:0 0}
+/* doors.png has five evenly spaced assets across each of its first two rows.
+   Scale the sheet to five cells wide and about three rows tall; each exit clips one cell. */
+.exit .door-sprite{width:500%;height:300%;background-size:100% 100%}
+.rear{width:14%;height:37%;left:43%;top:27%}
+.rear .door-sprite{left:0;top:0}
+.left{width:16%;height:43%;left:8%;top:26%}
+.left .door-sprite{left:0;top:-100%}
+.right{width:16%;height:43%;right:8%;top:26%}
+.right .door-sprite{left:-100%;top:-100%;transform:scaleX(-1)}
+.right:hover .door-sprite,.right:focus-visible .door-sprite{transform:scaleX(-1) scale(1.015)}
 
 .message{min-height:1.7rem;margin:0;text-align:center;color:#b99a70;font-size:.68rem}.party{display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem}.party div{padding:.38rem .3rem;border:1px solid #4e3c2c;background:#0c0907;text-align:center}.party strong,.party span{display:block}.party strong{font-size:.65rem;color:#e4c99f;letter-spacing:.08em}.party span{margin-top:.12rem;font-size:.45rem;color:#947b5d}.hint{margin:0;text-align:center;font-size:.5rem;color:#655747;text-transform:uppercase;letter-spacing:.1em}.scene.transitioning{animation:enter-door .42s ease-in-out}@keyframes enter-door{0%{transform:scale(1);filter:brightness(1)}55%{transform:scale(1.045);filter:brightness(.55)}100%{transform:scale(1.075);filter:brightness(0)}}@media(max-width:650px){#app{padding:.35rem;gap:.4rem}.scene-head{font-size:.5rem}.party span{font-size:.38rem}}@media(prefers-reduced-motion:reduce){.scene.transitioning{animation:none}}
