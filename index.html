@@ -1,6 +1,36 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090706"><title>Dungeon</title></head><body><main id="app"><section class="playfield"><canvas id="game" width="160" height="120" aria-label="Dungeon view"></canvas><aside class="map-panel"><div class="map-head"><span>MAP</span><span id="loot-status">0 GP</span><span id="key-status" hidden>KEY</span></div><canvas id="map" width="60" height="55" aria-label="Explored dungeon map"></canvas></aside></section><p id="message" class="message" aria-live="polite"></p><section id="encounter" class="encounter" hidden><div class="encounter-head"><strong id="foe-name">SKELETONS</strong><em id="battle-space">CORRIDOR</em><span id="warden-hp">◆ ◆ ◆ ◆</span></div><div id="roll" class="roll">Choose a hero. Each acts once before the foe.</div><div class="encounter-actions party-actions"><button data-hero="0">BRAM<small>+1</small></button><button data-hero="1">MARA<small>+1 UNDEAD</small></button><button data-hero="2">NIX<small>+0</small></button><button data-hero="3">ELARA<small>-1</small></button></div><div id="cleric-actions" class="wizard-actions cleric-actions" hidden><button data-prayer="attack">ATTACK</button><button data-prayer="heal">HEAL<small id="prayer-heal">3</small></button><button data-prayer="back">BACK</button></div><div id="heal-targets" class="wizard-actions heal-targets" hidden><button data-heal="0">BRAM</button><button data-heal="1">MARA</button><button data-heal="2">NIX</button><button data-heal="3">ELARA</button><button data-heal="-1">BACK</button></div><div id="wizard-actions" class="wizard-actions" hidden><button data-spell="lightning">LIGHTNING<small id="spell-lightning">1</small></button><button data-spell="fireball">FIREBALL<small id="spell-fireball">1</small></button><button data-spell="protection">PROTECT<small id="spell-protection">1</small></button><button data-spell="cancel">BACK</button></div></section><section id="lock-actions" class="lock-actions" hidden><strong>LOCKED DOOR · L3</strong><span id="lock-roll">Nix studies the mechanism.</span><div><button data-lock="pick">PICK LOCK<small>d6 + L</small></button><button data-lock="key">USE KEY</button><button data-lock="back">BACK</button></div></section><div class="lower-panel"><section class="party" aria-label="Adventuring party">
-<div class="hero" data-party-index="0"><i>1</i><strong>BRAM</strong><span>WARRIOR · L1</span><b id="life-bram">♥ 7/7</b></div>
-<div class="hero" data-party-index="1"><i>2</i><strong>MARA</strong><span>CLERIC · L1</span><b id="life-mara">♥ 5/5 · ✚ <span id="mara-heals">3</span></b></div>
-<div class="hero" data-party-index="2"><i>3</i><strong>NIX</strong><span>ROGUE · L1</span><b id="life-nix">♥ 4/4 · ◇ LOCKS +1</b></div>
-<div class="hero" data-party-index="3"><i>4</i><strong>ELARA</strong><span>WIZARD · L1</span><b id="life-elara">♥ 3/3 · ✦ <span id="elara-spells">3</span></b></div>
-</section><section id="inventory" class="inventory" hidden><div class="inventory-head"><strong>PARTY PACK</strong><button data-pack="close">CLOSE</button></div><div id="inventory-gold" class="inventory-gold">0 GP</div><div id="inventory-list" class="inventory-list"></div></section><div class="utility-actions"><button data-pack="open">PACK</button></div></div><button id="interact" class="interact" data-action="interact" hidden>EXAMINE</button><div class="controls" aria-label="Movement controls"><button data-action="left" aria-label="Turn left">↶</button><button data-action="forward" aria-label="Move forward">▲</button><button data-action="right" aria-label="Turn right">↷</button><button data-action="back" aria-label="Move backward">▼</button></div><p class="hint">WASD / arrows · E to interact</p></main><script type="module" src="/src/main.ts"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090706">
+  <title>Dungeon · Room Scene Prototype</title>
+</head>
+<body>
+  <main id="app">
+    <header class="scene-head"><span>DUNGEON</span><span>ROOM-SCENE PROTOTYPE</span></header>
+    <section class="scene" aria-label="Dungeon room">
+      <img class="room" src="/assets/room-scenes/dungeon01.png" alt="">
+      <button id="rear-exit" class="exit rear" aria-label="Rear door">
+        <span class="door-sprite"></span><em>ENTER</em>
+      </button>
+      <button id="left-exit" class="exit left" aria-label="Left door">
+        <span class="door-sprite"></span><em>ENTER</em>
+      </button>
+      <button id="right-exit" class="exit right" aria-label="Right door">
+        <span class="door-sprite"></span><em>ENTER</em>
+      </button>
+      <div class="vignette"></div>
+    </section>
+    <p id="message" class="message" aria-live="polite">Three exits break the silence. Choose a door.</p>
+    <section class="party">
+      <div><strong>BRAM</strong><span>WARRIOR · ♥ 7/7</span></div>
+      <div><strong>MARA</strong><span>CLERIC · ♥ 5/5</span></div>
+      <div><strong>NIX</strong><span>ROGUE · ♥ 4/4</span></div>
+      <div><strong>ELARA</strong><span>WIZARD · ♥ 3/3</span></div>
+    </section>
+    <p class="hint">Proof of concept · one room = one screen · click a door</p>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
