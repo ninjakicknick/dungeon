@@ -1,19 +1,5 @@
-<!doctype html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090706"><title>Dungeon</title></head>
-<body>
-<main id="app">
-  <header class="scene-head"><span>DUNGEON</span><span id="room-label">ROOM 1</span><button id="map-button" type="button">MAP</button></header>
-  <section class="scene" aria-label="Dungeon room">
-    <img class="room" src="/assets/room-scenes/dungeon01.png" alt="">
-    <button data-exit="rear" class="exit rear" aria-label="Rear door"><img class="door-art" src="/assets/room-overlays/door-back.png" alt=""><em>ENTER</em></button>
-    <button data-exit="left" class="exit left" aria-label="Left door"><img class="door-art" src="/assets/room-overlays/door-side.png" alt=""><em>ENTER</em></button>
-    <button data-exit="right" class="exit right" aria-label="Right door"><img class="door-art" src="/assets/room-overlays/door-side.png" alt=""><em>ENTER</em></button>
-    <div id="room-feature" class="room-feature" aria-hidden="true"></div><div class="vignette"></div>
-  </section>
-  <p id="message" class="message" aria-live="polite"></p>
-  <section class="party"><div><strong>BRAM</strong><span>WARRIOR · ♥ 7/7</span></div><div><strong>MARA</strong><span>CLERIC · ♥ 5/5</span></div><div><strong>NIX</strong><span>ROGUE · ♥ 4/4</span></div><div><strong>ELARA</strong><span>WIZARD · ♥ 3/3</span></div></section>
-</main>
-<dialog id="map-dialog"><header><strong>DUNGEON MAP</strong><button id="map-close" type="button">CLOSE</button></header><div id="map"></div><p>● current &nbsp; ○ explored &nbsp; ? unexplored exit</p></dialog>
-<script type="module" src="/src/main.ts"></script>
-</body></html>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#080b0c"><meta name="description" content="An empty underchapel. A light in your hand. Somewhere worth getting to know."><title>Dungeon — The Underchapel</title></head><body>
+<main id="app"><header><span class="wordmark">DUNGEON <small>THE UNDERCHAPEL</small></span><nav aria-label="Settings"><button id="sound" aria-pressed="false">Sound off</button><button id="hints" aria-pressed="false">Hotspots</button><button id="map-button">Map</button></nav></header>
+<section id="viewport" aria-label="Dungeon viewpoint" tabindex="-1"><div id="scene"><img id="room" alt=""><div id="light"></div><canvas id="air" aria-hidden="true"></canvas><div id="spots"></div></div><div id="shade"></div><p id="loading" role="status">Finding the entrance…</p></section>
+<footer><div><h1 id="place">The Underchapel</h1><p id="orientation"></p></div><button id="turn" hidden>↶ Turn around</button></footer><p id="message" aria-live="polite">Touch a passage to move. Pause wherever you like.</p></main>
+<dialog id="map-dialog" aria-labelledby="map-title"><header><h2 id="map-title">Remembered paths</h2><button id="map-close">Close</button></header><div id="map"></div><p>Only places you have visited. Dotted paths descend below the chapel.</p></dialog><script type="module" src="/src/main.ts"></script></body></html>
