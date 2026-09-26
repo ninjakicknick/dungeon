@@ -1,42 +1,49 @@
-# The Underchapel
+# Dungeon — The Crooked Crown
 
-Build a place worth inhabiting before adding a game. Fixed illustration, physical routes, a light carried by the unseen visitor. Never randomize the exits of these rooms.
+A wonderfully gamey dungeon, experienced at human height. Room identity takes precedence over architectural plausibility. The test is whether you have a favorite room and want to see through the next doorway.
 
-## Physical plan
+## The new slice
 
-The entrance is south of the gallery; the chapel is north. A crypt adjoins the chapel's east side. The cistern is one level below the eastern wing. A return stair climbs west to the entrance; a sloping watercourse provides a shorter passage from the gallery to the cistern.
+This is a new five-room loop with a sixth, hidden branch. It is not the Underchapel's seven-room topology with renamed rooms. The old engineering provides decoded-image transitions, authored routes, close views, opt-in sound, and local memory. The earlier design is archived in `docs/UNDERCHAPEL.md`; its assets remain available in source history.
 
-| Space | Position / level | Connections | Recognition |
-|---|---|---|---|
-| Entrance | southwest, upper | Gallery north; return stair east/down | Headless saint holding a bowl; fallen leaves; iron rail |
-| Gallery | west, upper | Entrance south; chapel north; watercourse east/down | Faded blue ceramic band; low barrel vault |
-| Chapel | northwest, upper | Gallery south; crypt east | Bare altar, ruined benches, broken stone-backed rose |
-| Crypt | northeast, upper | Chapel west; cistern south/down | Empty burial shelves; clay bowl; mineral-stained stair |
-| Watercourse | middle, sloping | Gallery west/up; cistern east/down | Dry walking edge alongside runoff; dogleg around the foundation |
-| Cistern | east, lower | Crypt north/up; watercourse west/up; return stair south | Broken column in water; perimeter ledge; high-water stain |
-| Return stair | southeast, rising west | Cistern north; entrance west/up | Iron rail and the familiar saint visible above |
+| Room | Landmark / palette | Physical connections | Ways to stay |
+| --- | --- | --- | --- |
+| Frog fountain | Crooked copper crown, jade frog, turquoise pool, terracotta | Armor left; garden right | Sit at the rim; touch water |
+| Red watch | Oversized horned bronze armor, crimson, diamond floor | Fountain behind; bridge ahead | Approach a hollow helmet; listen |
+| Long drop | Ivory bridge, violet shaft, improbable distant windows | Armor at near end; sleeping face beyond far landing | Approach parapet and look down; turn back from the far side |
+| Lantern garden | Huge peach caps, mint glow, curled roots, lush moss | Fountain left; bell chamber up right | Sit beneath the gills |
+| Sleeping face | Enormous stone face, hanging copper bell, saffron and red | Bridge left; garden right; mouth when open | Ring the bell; watch the stone change |
+| A room for one | Velvet armchair, hot tea, lemon, small shaft window | Back through the stone lips | Sit and stay |
 
-Main loop: entrance → gallery → chapel → crypt → cistern → return stair → entrance. Every route is traversable in either direction. The gallery–watercourse–cistern connection makes a smaller second loop.
+Loop: fountain → armor → bridge → sleeping face → garden → fountain. The bell room is reachable in either direction. Ringing opens or closes the mouth; the small sitting room is not an objective or a reward screen. It remains open across reloads. There is no way to close it from inside and strand the visitor.
 
-## Viewpoint convention
+## Presence
 
-A scene is a curated standing place, not a grid cell. Entering a room may include a small turn toward its landmark. The gallery, chapel, and crypt have dedicated reverse illustrations, not mirrored copies. Moving back from the cistern climbs into the crypt's west-facing view; returning from the chapel enters the gallery's south-facing view. The stair and watercourse have oblique compositions showing both ends.
+- Armor has a dedicated reverse illustration showing the frog. The far bridge landing has a separate return view framing the armor hall. A bridge crossing first advances to the far landing before entering the bell room.
+- Oblique garden and fountain compositions show both connecting passages. The back-edge control in the bridge moves toward the doorway behind the viewer.
+- Close viewpoints stay in their parent room on the map. Zooms are clamped to image edges. The shaft has original downward art.
+- Decoded images load before movement. On failure, the previous scene stays interactive and a subsequent click retries. Navigation is locked while moving or changing the bell room.
+- The pictures fill a stable 16:9 area. No inventory or dialog moves the scene. The map is a modal overlay; it neither teleports nor reveals unvisited names. Only traversed connections become solid paths. Short dotted stubs suggest visible unexplored exits; the secret branch has no stub.
+- Hotspot marks are normally invisible, except the small back-edge arrow. Hover, keyboard/controller focus, and the optional Hotspots control reveal them. There are no ambient-event notifications.
 
-Close views are deliberately cropped from the exact parent illustration. Their positioning is clamped to the image edges, so inspection cannot reveal empty borders. Returning restores the parent frame. They are pauses, not new rooms on the map.
+## Unannounced life (spoilers)
 
-The entrance/gallery/chapel share the blue band. Water and mineral streaks lead toward the lower level. The saint is visible from the return stair. The chapel is visible from the gallery and through the crypt doorway. Those continuities carry the geography; the optional map only records it.
+- The nearest armor visor is raised for one of three 47-second world phases. It is empty. The change does not depend on clicking, so the player can see a different state on returning, or catch it moving. Forward and close viewpoints share the same aligned alternate image.
+- Shaft windows brighten on staggered 79-second cycles. A small light traverses a deep section of the downward view during a roughly 21-second interval every 113 seconds. These clocks continue while other rooms are visited, using a persisted per-device phase seed.
+- Garden spores drift, the caps breathe with light, and a broader light wave crosses them briefly every 97 seconds.
+- Fountain rings spread from a touched point. A synthesized hollow bronze note receives a quieter response in the hall. Steam drifts above the teacup.
+- Sound beds crossfade with position: flowing fountain, hollow bronze hall, open shaft wind, soft garden tones, deep bell-room resonance, a quiet sitting room. Bell partials and delayed stereo echoes give the mechanism weight. Sound is opt-in, reversible, and suspended in a hidden tab. No downloaded recordings.
 
-## Presentation and state
+These are tiny environmental behaviors, not encounters, collectibles, or a puzzle system. Timed motion pauses rendering in hidden tabs; reduced motion removes particles, steam, shaking and movement transitions. Slow world-state changes remain observable.
 
-- Warm light comes from near the camera; the building has no active wall torches.
-- Subtle dust, lantern warmth, and cistern rings respect reduced motion and tab visibility.
-- Wind and water are independent seam-blended beds, mixed and filtered per room. Water direction reverses when the visitor turns around. Occasional drops are irregular. Sound starts only after consent/interaction.
-- A decoded image is ready before movement begins; navigation is locked during transitions. Load failure leaves the old scene usable and offers a retry through its hotspot.
-- Save version `dungeon-underchapel-v1` stores position, visited rooms, noticed details, and preferences. Storage failure must not prevent play.
-- No inventories, encounter placeholders, characters, stats, objectives, random doors, or completion percentages.
+## Controls and memory
+
+Mouse/touch uses the picture. Tab/Enter retains native button navigation. Arrows/WASD select spatially; Enter/Space activates; Escape/Backspace steps back or turns; H shows hotspots; M opens the map; Q toggles sound. Standard gamepad: D-pad/left stick selects, A activates, B backs out, Y shows hotspots, Start opens map, Back toggles sound. Axes have a dead zone and held-input repeat delay. All actions use the same buttons and transition guards.
+
+`dungeon-wonder-v1` stores position, visited rooms, walked paths, small interaction memories, mouth state, a world-phase seed and preferences. The Underchapel save is left intact; only sound/hotspot preferences migrate. Unrecognized room names, malformed JSON, inherited object names and unavailable storage must not prevent entry. No accounts or backend.
 
 ## Validation
 
-The browser smoke route walks the large loop both ways, the watercourse both ways, close views, saved-location reload, map discovery, and mobile bounds. The build keeps GitHub Pages paths relative to `/dungeon/` through Vite asset imports.
+`npm run build` checks TypeScript and bundles the production app. `npm run test:smoke` covers both loop directions, every close view, opening/closing the mouth, the hidden branch and reload, map disclosure, keyboard and simulated gamepad input, timed visor state, mobile bounds, failed-image retry, malformed/blocked storage and audio activation. Actual controller hardware and subjective headphone/mobile audio quality remain manual checks.
 
-Manual acceptance still matters: start at the saint, leave the map closed, wander for five minutes, then describe how to reach the crypt and return via the lower stair. A successful build alone cannot establish a sense of place.
+Art briefs and state edits: `assets/wonder/PROVENANCE.md`. The current visual direction deliberately abandons the Underchapel's gray-blue archaeology, while keeping its scene-loading and exploration foundation.
