@@ -1,10 +1,19 @@
-# Dungeon — The Underchapel
+# Dungeon — The Crooked Crown
 
-A small authored place to wander, built from fixed illustrated viewpoints. Seven connected spaces, a complete return loop, a wet shortcut, and quiet places to look closer. No monsters, combat, loot, objectives, or procedural rooms.
+A crowned frog, a corridor of empty armor, an impossible drop, a luminous garden, and a very large sleeping face. A small illustrated dungeon to wander at human height. Five distinctive rooms form a loop; something else is tucked away.
 
-**Play:** tap the passages in the picture. Small circles mark places to look closer. Turn around in the gallery, chapel, and crypt; step back from close views. `Tab` and `Enter` operate every hotspot; `Escape` steps back or turns around. `H` toggles hotspot labels. Sound is opt-in. Position, discoveries, and preferences stay on this device.
+[Play Dungeon](https://ninjakicknick.github.io/dungeon/)
 
-The map is a secondary record of visited places. It does not teleport you, reveal unseen rooms, or give you a checklist.
+Touch a passage in the picture to move. Pause beside the fountain or under the mushrooms. Look down from the bridge. There are things worth watching, not just things to click.
+
+## Controls
+
+- Mouse/touch: choose a doorway or object. **Hotspots** reveals available places if you need it.
+- Keyboard: arrows/WASD choose spatially; Enter/Space acts; Escape/Backspace returns or turns. Tab also works. H: hotspots. M: map. Q: sound.
+- Standard controller: left stick/D-pad chooses, A acts, B returns, Y shows hotspots, Start opens map, Back toggles sound.
+- Sound is opt-in. Position, remembered paths, physical changes and preferences stay on this device.
+
+The map records places you have visited and paths you have walked. It doesn't teleport, expose hidden-room names, or count discoveries. No monsters, combat, stats, loot tables, quests, or procedural generation yet.
 
 ## Development
 
@@ -12,18 +21,19 @@ The map is a secondary record of visited places. It does not teleport you, revea
 npm ci
 npm run dev
 npm run build
+npx playwright install chromium
 npm run test:smoke
 ```
 
-The smoke test needs Playwright Chromium (`npx playwright install chromium`). CI installs it automatically. GitHub Pages still builds and publishes on merge to `main`, with Vite's `/dungeon/` base. The production build bundles only the new referenced artwork; the older assets remain in source for attribution/history.
+GitHub Pages builds and publishes `main`, retaining the `/dungeon/` base and versioned asset URLs. The browser smoke test can use an existing Chromium through `TEST_CHROME=/absolute/path/to/chrome`. Build checks run on pull requests. For a browser-only test run, serve the development app and open `/dungeon/tests/preview.html`; it tests in an iframe with isolated memory and includes phone-sized previews. The `terminal.local` dev host is allowed for supervised preview; it does not affect production hosting.
 
-See [DESIGN.md](DESIGN.md) for the physical layout and [the art provenance](assets/underchapel/PROVENANCE.md) for generation briefs.
+See [DESIGN.md](DESIGN.md) for design, connections and **discovery spoilers**, [art provenance](assets/wonder/PROVENANCE.md) for image briefs, and [the archived Underchapel design](docs/UNDERCHAPEL.md) for the previous prototype.
 
-## Earlier artwork credits
+## Artwork and audio
 
-The retained, unused pixel-art dungeon scenery is by **Clint Bellanger**, from the *First Person Dungeon Crawl Art Pack* / *Heroine Dusk*, licensed **CC-BY-SA 3.0 (or later)**. It is not the visual reference for this version.
+Eleven new illustrated scene/state assets were created using image generation for this slice. Two return views and the downward shaft are dedicated compositions; close inspections reuse their parent artwork. Sounds are original browser-synthesized ambience and effects. No external art/audio services are called while playing.
+
+The retained, unused pixel-art scenery is by **Clint Bellanger**, from the *First Person Dungeon Crawl Art Pack* / *Heroine Dusk*, licensed **CC-BY-SA 3.0 (or later)**. It is not the visual direction of this version.
 
 Heroine Dusk: http://heroinedusk.com  
 Clint Bellanger: http://clintbellanger.net
-
-The atmospheric prototype reference is `assets/room-scenes/dungeon01.png`. New underchapel images were generated specifically for this slice from that reference. Ambient sound is synthesized by the application, with no third-party recordings.
